@@ -24,7 +24,7 @@ pxt4_xattr_trusted_get(const struct xattr_handler *handler,
 		       struct dentry *unused, struct inode *inode,
 		       const char *name, void *buffer, size_t size)
 {
-	return pxt4_xattr_get(inode, EXT4_XATTR_INDEX_TRUSTED,
+	return pxt4_xattr_get(inode, PXT4_XATTR_INDEX_TRUSTED,
 			      name, buffer, size);
 }
 
@@ -34,7 +34,7 @@ pxt4_xattr_trusted_set(const struct xattr_handler *handler,
 		       const char *name, const void *value,
 		       size_t size, int flags)
 {
-	return pxt4_xattr_set(inode, EXT4_XATTR_INDEX_TRUSTED,
+	return pxt4_xattr_set(inode, PXT4_XATTR_INDEX_TRUSTED,
 			      name, value, size, flags);
 }
 

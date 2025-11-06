@@ -15,10 +15,10 @@ static inline void pxt4_truncate_failed_write(struct inode *inode)
 	 * We don't need to call pxt4_break_layouts() because the blocks we
 	 * are truncating were never visible to userspace.
 	 */
-	down_write(&EXT4_I(inode)->i_mmap_sem);
+	down_write(&PXT4_I(inode)->i_mmap_sem);
 	truncate_inode_pages(inode->i_mapping, inode->i_size);
 	pxt4_truncate(inode);
-	up_write(&EXT4_I(inode)->i_mmap_sem);
+	up_write(&PXT4_I(inode)->i_mmap_sem);
 }
 
 /*
@@ -42,9 +42,9 @@ static inline unsigned long pxt4_blocks_for_truncate(struct inode *inode)
 
 	/* But we need to bound the transaction so we don't overflow the
 	 * journal. */
-	if (needed > EXT4_MAX_TRANS_DATA)
-		needed = EXT4_MAX_TRANS_DATA;
+	if (needed > PXT4_MAX_TRANS_DATA)
+		needed = PXT4_MAX_TRANS_DATA;
 
-	return EXT4_DATA_TRANS_BLOCKS(inode->i_sb) + needed;
+	return PXT4_DATA_TRANS_BLOCKS(inode->i_sb) + needed;
 }
 

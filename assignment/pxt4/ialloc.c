@@ -86,7 +86,7 @@ static int pxt4_validate_inode_bitmap(struct super_block *sb,
 
 	if (buffer_verified(bh))
 		return 0;
-	if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp))
+	if (PXT4_MB_GRP_IBITMAP_CORRUPT(grp))
 		return -EFSCORRUPTED;
 
 	pxt4_lock_group(sb, block_group);
@@ -94,12 +94,12 @@ static int pxt4_validate_inode_bitmap(struct super_block *sb,
 		goto verified;
 	blk = pxt4_inode_bitmap(sb, desc);
 	if (!pxt4_inode_bitmap_csum_verify(sb, block_group, desc, bh,
-					   EXT4_INODES_PER_GROUP(sb) / 8)) {
+					   PXT4_INODES_PER_GROUP(sb) / 8)) {
 		pxt4_unlock_group(sb, block_group);
 		pxt4_error(sb, "Corrupt inode bitmap - block_group = %u, "
 			   "inode_bitmap = %llu", block_group, blk);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 		return -EFSBADCRC;
 	}
 	set_buffer_verified(bh);
@@ -118,7 +118,7 @@ static struct buffer_head *
 pxt4_read_inode_bitmap(struct super_block *sb, pxt4_group_t block_group)
 {
 	struct pxt4_group_desc *desc;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct buffer_head *bh = NULL;
 	pxt4_fsblk_t bitmap_blk;
 	int err;
@@ -133,7 +133,7 @@ pxt4_read_inode_bitmap(struct super_block *sb, pxt4_group_t block_group)
 		pxt4_error(sb, "Invalid inode bitmap blk %llu in "
 			   "block_group %u", bitmap_blk, block_group);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 		return ERR_PTR(-EFSCORRUPTED);
 	}
 	bh = sb_getblk(sb, bitmap_blk);
@@ -154,7 +154,7 @@ pxt4_read_inode_bitmap(struct super_block *sb, pxt4_group_t block_group)
 
 	pxt4_lock_group(sb, block_group);
 	if (pxt4_has_group_desc_csum(sb) &&
-	    (desc->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT))) {
+	    (desc->bg_flags & cpu_to_le16(PXT4_BG_INODE_UNINIT))) {
 		if (block_group == 0) {
 			pxt4_unlock_group(sb, block_group);
 			unlock_buffer(bh);
@@ -163,8 +163,8 @@ pxt4_read_inode_bitmap(struct super_block *sb, pxt4_group_t block_group)
 			err = -EFSCORRUPTED;
 			goto out;
 		}
-		memset(bh->b_data, 0, (EXT4_INODES_PER_GROUP(sb) + 7) / 8);
-		pxt4_mark_bitmap_end(EXT4_INODES_PER_GROUP(sb),
+		memset(bh->b_data, 0, (PXT4_INODES_PER_GROUP(sb) + 7) / 8);
+		pxt4_mark_bitmap_end(PXT4_INODES_PER_GROUP(sb),
 				     sb->s_blocksize * 8, bh->b_data);
 		set_bitmap_uptodate(bh);
 		set_buffer_uptodate(bh);
@@ -198,7 +198,7 @@ pxt4_read_inode_bitmap(struct super_block *sb, pxt4_group_t block_group)
 			   "block_group = %u, inode_bitmap = %llu",
 			   block_group, bitmap_blk);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-				EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+				PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 		return ERR_PTR(-EIO);
 	}
 
@@ -244,7 +244,7 @@ void pxt4_free_inode(handle_t *handle, struct inode *inode)
 	struct pxt4_group_info *grp;
 
 	if (!sb) {
-		printk(KERN_ERR "EXT4-fs: %s:%d: inode on "
+		printk(KERN_ERR "PXT4-fs: %s:%d: inode on "
 		       "nonexistent device\n", __func__, __LINE__);
 		return;
 	}
@@ -259,7 +259,7 @@ void pxt4_free_inode(handle_t *handle, struct inode *inode)
 			 __func__, __LINE__, inode->i_ino, inode->i_nlink);
 		return;
 	}
-	sbi = EXT4_SB(sb);
+	sbi = PXT4_SB(sb);
 
 	ino = inode->i_ino;
 	pxt4_debug("freeing inode %lu\n", ino);
@@ -274,12 +274,12 @@ void pxt4_free_inode(handle_t *handle, struct inode *inode)
 	pxt4_clear_inode(inode);
 
 	es = sbi->s_es;
-	if (ino < EXT4_FIRST_INO(sb) || ino > le32_to_cpu(es->s_inodes_count)) {
+	if (ino < PXT4_FIRST_INO(sb) || ino > le32_to_cpu(es->s_inodes_count)) {
 		pxt4_error(sb, "reserved or nonexistent inode %lu", ino);
 		goto error_return;
 	}
-	block_group = (ino - 1) / EXT4_INODES_PER_GROUP(sb);
-	bit = (ino - 1) % EXT4_INODES_PER_GROUP(sb);
+	block_group = (ino - 1) / PXT4_INODES_PER_GROUP(sb);
+	bit = (ino - 1) % PXT4_INODES_PER_GROUP(sb);
 	bitmap_bh = pxt4_read_inode_bitmap(sb, block_group);
 	/* Don't bother if the inode bitmap is corrupt. */
 	grp = pxt4_get_group_info(sb, block_group);
@@ -288,7 +288,7 @@ void pxt4_free_inode(handle_t *handle, struct inode *inode)
 		bitmap_bh = NULL;
 		goto error_return;
 	}
-	if (unlikely(EXT4_MB_GRP_IBITMAP_CORRUPT(grp))) {
+	if (unlikely(PXT4_MB_GRP_IBITMAP_CORRUPT(grp))) {
 		fatal = -EFSCORRUPTED;
 		goto error_return;
 	}
@@ -319,7 +319,7 @@ void pxt4_free_inode(handle_t *handle, struct inode *inode)
 		percpu_counter_dec(&sbi->s_dirs_counter);
 	}
 	pxt4_inode_bitmap_csum_set(sb, block_group, gdp, bitmap_bh,
-				   EXT4_INODES_PER_GROUP(sb) / 8);
+				   PXT4_INODES_PER_GROUP(sb) / 8);
 	pxt4_group_desc_csum_set(sb, block_group, gdp);
 	pxt4_unlock_group(sb, block_group);
 
@@ -344,7 +344,7 @@ out:
 	} else {
 		pxt4_error(sb, "bit already cleared for inode %lu", ino);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 	}
 
 error_return:
@@ -369,7 +369,7 @@ static void get_orlov_stats(struct super_block *sb, pxt4_group_t g,
 	struct pxt4_group_desc *desc;
 
 	if (flex_size > 1) {
-		struct flex_groups *fg = sbi_array_rcu_deref(EXT4_SB(sb),
+		struct flex_groups *fg = sbi_array_rcu_deref(PXT4_SB(sb),
 							     s_flex_groups, g);
 		stats->free_inodes = atomic_read(&fg->free_inodes);
 		stats->free_clusters = atomic64_read(&fg->free_clusters);
@@ -414,10 +414,10 @@ static int find_group_orlov(struct super_block *sb, struct inode *parent,
 			    pxt4_group_t *group, umode_t mode,
 			    const struct qstr *qstr)
 {
-	pxt4_group_t parent_group = EXT4_I(parent)->i_block_group;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	pxt4_group_t parent_group = PXT4_I(parent)->i_block_group;
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_group_t real_ngroups = pxt4_get_groups_count(sb);
-	int inodes_per_group = EXT4_INODES_PER_GROUP(sb);
+	int inodes_per_group = PXT4_INODES_PER_GROUP(sb);
 	unsigned int freei, avefreei, grp_free;
 	pxt4_fsblk_t freec, avefreec;
 	unsigned int ndirs;
@@ -445,7 +445,7 @@ static int find_group_orlov(struct super_block *sb, struct inode *parent,
 
 	if (S_ISDIR(mode) &&
 	    ((parent == d_inode(sb->s_root)) ||
-	     (pxt4_test_inode_flag(parent, EXT4_INODE_TOPDIR)))) {
+	     (pxt4_test_inode_flag(parent, PXT4_INODE_TOPDIR)))) {
 		int best_ndir = inodes_per_group;
 		int ret = -1;
 
@@ -504,14 +504,14 @@ static int find_group_orlov(struct super_block *sb, struct inode *parent,
 	min_inodes = avefreei - inodes_per_group*flex_size / 4;
 	if (min_inodes < 1)
 		min_inodes = 1;
-	min_clusters = avefreec - EXT4_CLUSTERS_PER_GROUP(sb)*flex_size / 4;
+	min_clusters = avefreec - PXT4_CLUSTERS_PER_GROUP(sb)*flex_size / 4;
 
 	/*
 	 * Start looking in the flex group where we last allocated an
 	 * inode for this parent directory
 	 */
-	if (EXT4_I(parent)->i_last_alloc_group != ~0) {
-		parent_group = EXT4_I(parent)->i_last_alloc_group;
+	if (PXT4_I(parent)->i_last_alloc_group != ~0) {
+		parent_group = PXT4_I(parent)->i_last_alloc_group;
 		if (flex_size > 1)
 			parent_group >>= sbi->s_log_groups_per_flex;
 	}
@@ -532,7 +532,7 @@ fallback:
 	ngroups = real_ngroups;
 	avefreei = freei / ngroups;
 fallback_retry:
-	parent_group = EXT4_I(parent)->i_block_group;
+	parent_group = PXT4_I(parent)->i_block_group;
 	for (i = 0; i < ngroups; i++) {
 		grp = (parent_group + i) % ngroups;
 		desc = pxt4_get_group_desc(sb, grp, NULL);
@@ -560,10 +560,10 @@ fallback_retry:
 static int find_group_other(struct super_block *sb, struct inode *parent,
 			    pxt4_group_t *group, umode_t mode)
 {
-	pxt4_group_t parent_group = EXT4_I(parent)->i_block_group;
+	pxt4_group_t parent_group = PXT4_I(parent)->i_block_group;
 	pxt4_group_t i, last, ngroups = pxt4_get_groups_count(sb);
 	struct pxt4_group_desc *desc;
-	int flex_size = pxt4_flex_bg_size(EXT4_SB(sb));
+	int flex_size = pxt4_flex_bg_size(PXT4_SB(sb));
 
 	/*
 	 * Try to place the inode is the same flex group as its
@@ -587,9 +587,9 @@ static int find_group_other(struct super_block *sb, struct inode *parent,
 				return 0;
 			}
 		}
-		if (!retry && EXT4_I(parent)->i_last_alloc_group != ~0) {
+		if (!retry && PXT4_I(parent)->i_last_alloc_group != ~0) {
 			retry = 1;
-			parent_group = EXT4_I(parent)->i_last_alloc_group;
+			parent_group = PXT4_I(parent)->i_last_alloc_group;
 			goto try_again;
 		}
 		/*
@@ -667,7 +667,7 @@ static int recently_deleted(struct super_block *sb, pxt4_group_t group, int ino)
 	struct pxt4_group_desc	*gdp;
 	struct pxt4_inode	*raw_inode;
 	struct buffer_head	*bh;
-	int inodes_per_block = EXT4_SB(sb)->s_inodes_per_block;
+	int inodes_per_block = PXT4_SB(sb)->s_inodes_per_block;
 	int offset, ret = 0;
 	int recentcy = RECENTCY_MIN;
 	u32 dtime, now;
@@ -685,7 +685,7 @@ static int recently_deleted(struct super_block *sb, pxt4_group_t group, int ino)
 		 */
 		goto out;
 
-	offset = (ino % inodes_per_block) * EXT4_INODE_SIZE(sb);
+	offset = (ino % inodes_per_block) * PXT4_INODE_SIZE(sb);
 	raw_inode = (struct pxt4_inode *) (bh->b_data + offset);
 
 	/* i_dtime is only 32 bits on disk, but we only care about relative
@@ -711,14 +711,14 @@ static int find_inode_bit(struct super_block *sb, pxt4_group_t group,
 next:
 	*ino = pxt4_find_next_zero_bit((unsigned long *)
 				       bitmap->b_data,
-				       EXT4_INODES_PER_GROUP(sb), *ino);
-	if (*ino >= EXT4_INODES_PER_GROUP(sb))
+				       PXT4_INODES_PER_GROUP(sb), *ino);
+	if (*ino >= PXT4_INODES_PER_GROUP(sb))
 		return 0;
 
-	if ((EXT4_SB(sb)->s_journal == NULL) &&
+	if ((PXT4_SB(sb)->s_journal == NULL) &&
 	    recently_deleted(sb, group, *ino)) {
 		*ino = *ino + 1;
-		if (*ino < EXT4_INODES_PER_GROUP(sb))
+		if (*ino < PXT4_INODES_PER_GROUP(sb))
 			goto next;
 		return 0;
 	}
@@ -763,14 +763,14 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 		return ERR_PTR(-EPERM);
 
 	sb = dir->i_sb;
-	sbi = EXT4_SB(sb);
+	sbi = PXT4_SB(sb);
 
 	if (unlikely(pxt4_forced_shutdown(sbi)))
 		return ERR_PTR(-EIO);
 
 	if ((IS_ENCRYPTED(dir) || DUMMY_ENCRYPTION_ENABLED(sbi)) &&
 	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)) &&
-	    !(i_flags & EXT4_EA_INODE_FL)) {
+	    !(i_flags & PXT4_EA_INODE_FL)) {
 		err = fscrypt_get_encryption_info(dir);
 		if (err)
 			return ERR_PTR(err);
@@ -779,8 +779,8 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 		encrypt = 1;
 	}
 
-	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
-#ifdef CONFIG_EXT4_FS_POSIX_ACL
+	if (!handle && sbi->s_journal && !(i_flags & PXT4_EA_INODE_FL)) {
+#ifdef CONFIG_PXT4_FS_POSIX_ACL
 		struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
 
 		if (IS_ERR(p))
@@ -826,7 +826,7 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 	inode = new_inode(sb);
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
-	ei = EXT4_I(inode);
+	ei = PXT4_I(inode);
 
 	/*
 	 * Initialize owners and quota early so that we don't have to account
@@ -845,10 +845,10 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 		inode_init_owner(inode, dir, mode);
 
 	if (pxt4_has_feature_project(sb) &&
-	    pxt4_test_inode_flag(dir, EXT4_INODE_PROJINHERIT))
-		ei->i_projid = EXT4_I(dir)->i_projid;
+	    pxt4_test_inode_flag(dir, PXT4_INODE_PROJINHERIT))
+		ei->i_projid = PXT4_I(dir)->i_projid;
 	else
-		ei->i_projid = make_kprojid(&init_user_ns, EXT4_DEF_PROJID);
+		ei->i_projid = make_kprojid(&init_user_ns, PXT4_DEF_PROJID);
 
 	err = dquot_initialize(inode);
 	if (err)
@@ -858,8 +858,8 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 		goal = sbi->s_inode_goal;
 
 	if (goal && goal <= le32_to_cpu(sbi->s_es->s_inodes_count)) {
-		group = (goal - 1) / EXT4_INODES_PER_GROUP(sb);
-		ino = (goal - 1) % EXT4_INODES_PER_GROUP(sb);
+		group = (goal - 1) / PXT4_INODES_PER_GROUP(sb);
+		ino = (goal - 1) % PXT4_INODES_PER_GROUP(sb);
 		ret2 = 0;
 		goto got_group;
 	}
@@ -870,7 +870,7 @@ struct inode *__pxt4_new_inode(handle_t *handle, struct inode *dir,
 		ret2 = find_group_other(sb, dir, &group, mode);
 
 got_group:
-	EXT4_I(dir)->i_last_alloc_group = group;
+	PXT4_I(dir)->i_last_alloc_group = group;
 	err = -ENOSPC;
 	if (ret2 == -1)
 		goto out;
@@ -895,13 +895,13 @@ got_group:
 
 		grp = pxt4_get_group_info(sb, group);
 		/* Skip groups with already-known suspicious inode tables */
-		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp))
+		if (PXT4_MB_GRP_IBITMAP_CORRUPT(grp))
 			goto next_group;
 
 		brelse(inode_bitmap_bh);
 		inode_bitmap_bh = pxt4_read_inode_bitmap(sb, group);
 		/* Skip groups with suspicious inode tables */
-		if (EXT4_MB_GRP_IBITMAP_CORRUPT(grp) ||
+		if (PXT4_MB_GRP_IBITMAP_CORRUPT(grp) ||
 		    IS_ERR(inode_bitmap_bh)) {
 			inode_bitmap_bh = NULL;
 			goto next_group;
@@ -912,11 +912,11 @@ repeat_in_this_group:
 		if (!ret2)
 			goto next_group;
 
-		if (group == 0 && (ino + 1) < EXT4_FIRST_INO(sb)) {
+		if (group == 0 && (ino + 1) < PXT4_FIRST_INO(sb)) {
 			pxt4_error(sb, "reserved inode found cleared - "
 				   "inode=%lu", ino + 1);
 			pxt4_mark_group_bitmap_corrupted(sb, group,
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 			goto next_group;
 		}
 
@@ -956,7 +956,7 @@ repeat_in_this_group:
 		if (!ret2)
 			goto got; /* we grabbed the inode! */
 
-		if (ino < EXT4_INODES_PER_GROUP(sb))
+		if (ino < PXT4_INODES_PER_GROUP(sb))
 			goto repeat_in_this_group;
 next_group:
 		if (++group == ngroups)
@@ -982,7 +982,7 @@ got:
 
 	/* We may have to initialize the block bitmap if it isn't already */
 	if (pxt4_has_group_desc_csum(sb) &&
-	    gdp->bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT)) {
+	    gdp->bg_flags & cpu_to_le16(PXT4_BG_BLOCK_UNINIT)) {
 		struct buffer_head *block_bitmap_bh;
 
 		block_bitmap_bh = pxt4_read_block_bitmap(sb, group);
@@ -1004,8 +1004,8 @@ got:
 		/* recheck and clear flag under lock if we still need to */
 		pxt4_lock_group(sb, group);
 		if (pxt4_has_group_desc_csum(sb) &&
-		    (gdp->bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT))) {
-			gdp->bg_flags &= cpu_to_le16(~EXT4_BG_BLOCK_UNINIT);
+		    (gdp->bg_flags & cpu_to_le16(PXT4_BG_BLOCK_UNINIT))) {
+			gdp->bg_flags &= cpu_to_le16(~PXT4_BG_BLOCK_UNINIT);
 			pxt4_free_group_clusters_set(sb, gdp,
 				pxt4_free_clusters_after_init(sb, group, gdp));
 			pxt4_block_bitmap_csum_set(sb, group, gdp,
@@ -1028,10 +1028,10 @@ got:
 
 		down_read(&grp->alloc_sem); /* protect vs itable lazyinit */
 		pxt4_lock_group(sb, group); /* while we modify the bg desc */
-		free = EXT4_INODES_PER_GROUP(sb) -
+		free = PXT4_INODES_PER_GROUP(sb) -
 			pxt4_itable_unused_count(sb, gdp);
-		if (gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT)) {
-			gdp->bg_flags &= cpu_to_le16(~EXT4_BG_INODE_UNINIT);
+		if (gdp->bg_flags & cpu_to_le16(PXT4_BG_INODE_UNINIT)) {
+			gdp->bg_flags &= cpu_to_le16(~PXT4_BG_INODE_UNINIT);
 			free = 0;
 		}
 		/*
@@ -1041,7 +1041,7 @@ got:
 		 */
 		if (ino > free)
 			pxt4_itable_unused_set(sb, gdp,
-					(EXT4_INODES_PER_GROUP(sb) - ino));
+					(PXT4_INODES_PER_GROUP(sb) - ino));
 		up_read(&grp->alloc_sem);
 	} else {
 		pxt4_lock_group(sb, group);
@@ -1059,7 +1059,7 @@ got:
 	}
 	if (pxt4_has_group_desc_csum(sb)) {
 		pxt4_inode_bitmap_csum_set(sb, group, gdp, inode_bitmap_bh,
-					   EXT4_INODES_PER_GROUP(sb) / 8);
+					   PXT4_INODES_PER_GROUP(sb) / 8);
 		pxt4_group_desc_csum_set(sb, group, gdp);
 	}
 	pxt4_unlock_group(sb, group);
@@ -1081,7 +1081,7 @@ got:
 						flex_group)->free_inodes);
 	}
 
-	inode->i_ino = ino + group * EXT4_INODES_PER_GROUP(sb);
+	inode->i_ino = ino + group * PXT4_INODES_PER_GROUP(sb);
 	/* This is the optimal IO size (for stat), not the fs block size */
 	inode->i_blocks = 0;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
@@ -1093,7 +1093,7 @@ got:
 
 	/* Don't inherit extent flag from directory, amongst others. */
 	ei->i_flags =
-		pxt4_mask_flags(mode, EXT4_I(dir)->i_flags & EXT4_FL_INHERITED);
+		pxt4_mask_flags(mode, PXT4_I(dir)->i_flags & PXT4_FL_INHERITED);
 	ei->i_flags |= i_flags;
 	ei->i_file_acl = 0;
 	ei->i_dtime = 0;
@@ -1112,7 +1112,7 @@ got:
 		pxt4_error(sb, "failed to insert inode %lu: doubly allocated?",
 			   inode->i_ino);
 		pxt4_mark_group_bitmap_corrupted(sb, group,
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 		goto out;
 	}
 	inode->i_generation = prandom_u32();
@@ -1129,12 +1129,12 @@ got:
 	}
 
 	pxt4_clear_state_flags(ei); /* Only relevant on 32-bit archs */
-	pxt4_set_inode_state(inode, EXT4_STATE_NEW);
+	pxt4_set_inode_state(inode, PXT4_STATE_NEW);
 
 	ei->i_extra_isize = sbi->s_want_extra_isize;
 	ei->i_inline_off = 0;
 	if (pxt4_has_feature_inline_data(sb))
-		pxt4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		pxt4_set_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 	ret = inode;
 	err = dquot_alloc_inode(inode);
 	if (err)
@@ -1151,7 +1151,7 @@ got:
 			goto fail_free_drop;
 	}
 
-	if (!(ei->i_flags & EXT4_EA_INODE_FL)) {
+	if (!(ei->i_flags & PXT4_EA_INODE_FL)) {
 		err = pxt4_init_acl(handle, inode, dir);
 		if (err)
 			goto fail_free_drop;
@@ -1164,7 +1164,7 @@ got:
 	if (pxt4_has_feature_extents(sb)) {
 		/* set extent flag only for directory, file and normal symlink*/
 		if (S_ISDIR(mode) || S_ISREG(mode) || S_ISLNK(mode)) {
-			pxt4_set_inode_flag(inode, EXT4_INODE_EXTENTS);
+			pxt4_set_inode_flag(inode, PXT4_INODE_EXTENTS);
 			pxt4_ext_tree_init(handle, inode);
 		}
 	}
@@ -1201,18 +1201,18 @@ out:
 /* Verify that we are loading a valid orphan from disk */
 struct inode *pxt4_orphan_get(struct super_block *sb, unsigned long ino)
 {
-	unsigned long max_ino = le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count);
+	unsigned long max_ino = le32_to_cpu(PXT4_SB(sb)->s_es->s_inodes_count);
 	pxt4_group_t block_group;
 	int bit;
 	struct buffer_head *bitmap_bh = NULL;
 	struct inode *inode = NULL;
 	int err = -EFSCORRUPTED;
 
-	if (ino < EXT4_FIRST_INO(sb) || ino > max_ino)
+	if (ino < PXT4_FIRST_INO(sb) || ino > max_ino)
 		goto bad_orphan;
 
-	block_group = (ino - 1) / EXT4_INODES_PER_GROUP(sb);
-	bit = (ino - 1) % EXT4_INODES_PER_GROUP(sb);
+	block_group = (ino - 1) / PXT4_INODES_PER_GROUP(sb);
+	bit = (ino - 1) % PXT4_INODES_PER_GROUP(sb);
 	bitmap_bh = pxt4_read_inode_bitmap(sb, block_group);
 	if (IS_ERR(bitmap_bh))
 		return ERR_CAST(bitmap_bh);
@@ -1224,7 +1224,7 @@ struct inode *pxt4_orphan_get(struct super_block *sb, unsigned long ino)
 	if (!pxt4_test_bit(bit, bitmap_bh->b_data))
 		goto bad_orphan;
 
-	inode = pxt4_iget(sb, ino, EXT4_IGET_NORMAL);
+	inode = pxt4_iget(sb, ino, PXT4_IGET_NORMAL);
 	if (IS_ERR(inode)) {
 		err = PTR_ERR(inode);
 		pxt4_error(sb, "couldn't read orphan inode %lu (err %d)",
@@ -1274,12 +1274,12 @@ unsigned long pxt4_count_free_inodes(struct super_block *sb)
 	unsigned long desc_count;
 	struct pxt4_group_desc *gdp;
 	pxt4_group_t i, ngroups = pxt4_get_groups_count(sb);
-#ifdef EXT4FS_DEBUG
+#ifdef PXT4FS_DEBUG
 	struct pxt4_super_block *es;
 	unsigned long bitmap_count, x;
 	struct buffer_head *bitmap_bh = NULL;
 
-	es = EXT4_SB(sb)->s_es;
+	es = PXT4_SB(sb)->s_es;
 	desc_count = 0;
 	bitmap_count = 0;
 	gdp = NULL;
@@ -1296,7 +1296,7 @@ unsigned long pxt4_count_free_inodes(struct super_block *sb)
 		}
 
 		x = pxt4_count_free(bitmap_bh->b_data,
-				    EXT4_INODES_PER_GROUP(sb) / 8);
+				    PXT4_INODES_PER_GROUP(sb) / 8);
 		printk(KERN_DEBUG "group %lu: stored = %d, counted = %lu\n",
 			(unsigned long) i, pxt4_free_inodes_count(sb, gdp), x);
 		bitmap_count += x;
@@ -1346,7 +1346,7 @@ int pxt4_init_inode_table(struct super_block *sb, pxt4_group_t group,
 				 int barrier)
 {
 	struct pxt4_group_info *grp = pxt4_get_group_info(sb, group);
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct pxt4_group_desc *gdp = NULL;
 	struct buffer_head *group_desc_bh;
 	handle_t *handle;
@@ -1368,10 +1368,10 @@ int pxt4_init_inode_table(struct super_block *sb, pxt4_group_t group,
 	 * We do not need to lock this, because we are the only one
 	 * handling this flag.
 	 */
-	if (gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_ZEROED))
+	if (gdp->bg_flags & cpu_to_le16(PXT4_BG_INODE_ZEROED))
 		goto out;
 
-	handle = pxt4_journal_start_sb(sb, EXT4_HT_MISC, 1);
+	handle = pxt4_journal_start_sb(sb, PXT4_HT_MISC, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		goto out;
@@ -1383,8 +1383,8 @@ int pxt4_init_inode_table(struct super_block *sb, pxt4_group_t group,
 	 * used inodes so we need to skip blocks with used inodes in
 	 * inode table.
 	 */
-	if (!(gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT))) {
-		used_inos = EXT4_INODES_PER_GROUP(sb) -
+	if (!(gdp->bg_flags & cpu_to_le16(PXT4_BG_INODE_UNINIT))) {
+		used_inos = PXT4_INODES_PER_GROUP(sb) -
 			    pxt4_itable_unused_count(sb, gdp);
 		used_blks = DIV_ROUND_UP(used_inos, sbi->s_inodes_per_block);
 
@@ -1399,13 +1399,13 @@ int pxt4_init_inode_table(struct super_block *sb, pxt4_group_t group,
 			goto err_out;
 		}
 
-		used_inos += group * EXT4_INODES_PER_GROUP(sb);
+		used_inos += group * PXT4_INODES_PER_GROUP(sb);
 		/*
 		 * Are there some uninitialized inodes in the inode table
 		 * before the first normal inode?
 		 */
 		if ((used_blks != sbi->s_itb_per_group) &&
-		     (used_inos < EXT4_FIRST_INO(sb))) {
+		     (used_inos < PXT4_FIRST_INO(sb))) {
 			pxt4_error(sb, "Something is wrong with group %u: "
 				   "itable unused count: %u; "
 				   "itables initialized count: %ld",
@@ -1443,7 +1443,7 @@ int pxt4_init_inode_table(struct super_block *sb, pxt4_group_t group,
 
 skip_zeroout:
 	pxt4_lock_group(sb, group);
-	gdp->bg_flags |= cpu_to_le16(EXT4_BG_INODE_ZEROED);
+	gdp->bg_flags |= cpu_to_le16(PXT4_BG_INODE_ZEROED);
 	pxt4_group_desc_csum_set(sb, group, gdp);
 	pxt4_unlock_group(sb, group);
 

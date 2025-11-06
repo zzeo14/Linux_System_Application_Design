@@ -58,9 +58,9 @@ static struct buffer_head *pxt4_append(handle_t *handle,
 	struct buffer_head *bh;
 	int err;
 
-	if (unlikely(EXT4_SB(inode->i_sb)->s_max_dir_size_kb &&
+	if (unlikely(PXT4_SB(inode->i_sb)->s_max_dir_size_kb &&
 		     ((inode->i_size >> 10) >=
-		      EXT4_SB(inode->i_sb)->s_max_dir_size_kb)))
+		      PXT4_SB(inode->i_sb)->s_max_dir_size_kb)))
 		return ERR_PTR(-ENOSPC);
 
 	*block = inode->i_size >> inode->i_sb->s_blocksize_bits;
@@ -76,15 +76,15 @@ static struct buffer_head *pxt4_append(handle_t *handle,
 	if (err < 0)
 		return ERR_PTR(err);
 	if (err) {
-		EXT4_ERROR_INODE(inode, "Logical block already allocated");
+		PXT4_ERROR_INODE(inode, "Logical block already allocated");
 		return ERR_PTR(-EFSCORRUPTED);
 	}
 
-	bh = pxt4_bread(handle, inode, *block, EXT4_GET_BLOCKS_CREATE);
+	bh = pxt4_bread(handle, inode, *block, PXT4_GET_BLOCKS_CREATE);
 	if (IS_ERR(bh))
 		return bh;
 	inode->i_size += inode->i_sb->s_blocksize;
-	EXT4_I(inode)->i_disksize = inode->i_size;
+	PXT4_I(inode)->i_disksize = inode->i_size;
 	BUFFER_TRACE(bh, "get_write_access");
 	err = pxt4_journal_get_write_access(handle, bh);
 	if (err) {
@@ -312,12 +312,12 @@ static int pxt4_dx_add_entry(handle_t *handle, struct pxt4_filename *fname,
 void pxt4_initialize_dirent_tail(struct buffer_head *bh,
 				 unsigned int blocksize)
 {
-	struct pxt4_dir_entry_tail *t = EXT4_DIRENT_TAIL(bh->b_data, blocksize);
+	struct pxt4_dir_entry_tail *t = PXT4_DIRENT_TAIL(bh->b_data, blocksize);
 
 	memset(t, 0, sizeof(struct pxt4_dir_entry_tail));
 	t->det_rec_len = pxt4_rec_len_to_disk(
 			sizeof(struct pxt4_dir_entry_tail), blocksize);
-	t->det_reserved_ft = EXT4_FT_DIR_CSUM;
+	t->det_reserved_ft = PXT4_FT_DIR_CSUM;
 }
 
 /* Walk through a dirent block to find a checksum "dirent" at the tail */
@@ -331,7 +331,7 @@ static struct pxt4_dir_entry_tail *get_dirent_tail(struct inode *inode,
 
 	d = (struct pxt4_dir_entry *)bh->b_data;
 	top = (struct pxt4_dir_entry *)(bh->b_data +
-		(EXT4_BLOCK_SIZE(inode->i_sb) -
+		(PXT4_BLOCK_SIZE(inode->i_sb) -
 		 sizeof(struct pxt4_dir_entry_tail)));
 	while (d < top && d->rec_len)
 		d = (struct pxt4_dir_entry *)(((void *)d) +
@@ -342,13 +342,13 @@ static struct pxt4_dir_entry_tail *get_dirent_tail(struct inode *inode,
 
 	t = (struct pxt4_dir_entry_tail *)d;
 #else
-	t = EXT4_DIRENT_TAIL(bh->b_data, EXT4_BLOCK_SIZE(inode->i_sb));
+	t = PXT4_DIRENT_TAIL(bh->b_data, PXT4_BLOCK_SIZE(inode->i_sb));
 #endif
 
 	if (t->det_reserved_zero1 ||
 	    le16_to_cpu(t->det_rec_len) != sizeof(struct pxt4_dir_entry_tail) ||
 	    t->det_reserved_zero2 ||
-	    t->det_reserved_ft != EXT4_FT_DIR_CSUM)
+	    t->det_reserved_ft != PXT4_FT_DIR_CSUM)
 		return NULL;
 
 	return t;
@@ -356,8 +356,8 @@ static struct pxt4_dir_entry_tail *get_dirent_tail(struct inode *inode,
 
 static __le32 pxt4_dirblock_csum(struct inode *inode, void *dirent, int size)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	__u32 csum;
 
 	csum = pxt4_chksum(sbi, ei->i_csum_seed, (__u8 *)dirent, size);
@@ -428,12 +428,12 @@ static struct dx_countlimit *get_dx_countlimit(struct inode *inode,
 	struct dx_root_info *root;
 	int count_offset;
 
-	if (le16_to_cpu(dirent->rec_len) == EXT4_BLOCK_SIZE(inode->i_sb))
+	if (le16_to_cpu(dirent->rec_len) == PXT4_BLOCK_SIZE(inode->i_sb))
 		count_offset = 8;
 	else if (le16_to_cpu(dirent->rec_len) == 12) {
 		dp = (struct pxt4_dir_entry *)(((void *)dirent) + 12);
 		if (le16_to_cpu(dp->rec_len) !=
-		    EXT4_BLOCK_SIZE(inode->i_sb) - 12)
+		    PXT4_BLOCK_SIZE(inode->i_sb) - 12)
 			return NULL;
 		root = (struct dx_root_info *)(((void *)dp + 12));
 		if (root->reserved_zero ||
@@ -451,8 +451,8 @@ static struct dx_countlimit *get_dx_countlimit(struct inode *inode,
 static __le32 pxt4_dx_csum(struct inode *inode, struct pxt4_dir_entry *dirent,
 			   int count_offset, int count, struct dx_tail *t)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	__u32 csum;
 	int size;
 	__u32 dummy_csum = 0;
@@ -478,13 +478,13 @@ static int pxt4_dx_csum_verify(struct inode *inode,
 
 	c = get_dx_countlimit(inode, dirent, &count_offset);
 	if (!c) {
-		EXT4_ERROR_INODE(inode, "dir seems corrupt?  Run e2fsck -D.");
+		PXT4_ERROR_INODE(inode, "dir seems corrupt?  Run e2fsck -D.");
 		return 0;
 	}
 	limit = le16_to_cpu(c->limit);
 	count = le16_to_cpu(c->count);
 	if (count_offset + (limit * sizeof(struct dx_entry)) >
-	    EXT4_BLOCK_SIZE(inode->i_sb) - sizeof(struct dx_tail)) {
+	    PXT4_BLOCK_SIZE(inode->i_sb) - sizeof(struct dx_tail)) {
 		warn_no_space_for_csum(inode);
 		return 0;
 	}
@@ -507,13 +507,13 @@ static void pxt4_dx_csum_set(struct inode *inode, struct pxt4_dir_entry *dirent)
 
 	c = get_dx_countlimit(inode, dirent, &count_offset);
 	if (!c) {
-		EXT4_ERROR_INODE(inode, "dir seems corrupt?  Run e2fsck -D.");
+		PXT4_ERROR_INODE(inode, "dir seems corrupt?  Run e2fsck -D.");
 		return;
 	}
 	limit = le16_to_cpu(c->limit);
 	count = le16_to_cpu(c->count);
 	if (count_offset + (limit * sizeof(struct dx_entry)) >
-	    EXT4_BLOCK_SIZE(inode->i_sb) - sizeof(struct dx_tail)) {
+	    PXT4_BLOCK_SIZE(inode->i_sb) - sizeof(struct dx_tail)) {
 		warn_no_space_for_csum(inode);
 		return;
 	}
@@ -587,8 +587,8 @@ static inline void dx_set_limit(struct dx_entry *entries, unsigned value)
 
 static inline unsigned dx_root_limit(struct inode *dir, unsigned infosize)
 {
-	unsigned entry_space = dir->i_sb->s_blocksize - EXT4_DIR_REC_LEN(1) -
-		EXT4_DIR_REC_LEN(2) - infosize;
+	unsigned entry_space = dir->i_sb->s_blocksize - PXT4_DIR_REC_LEN(1) -
+		PXT4_DIR_REC_LEN(2) - infosize;
 
 	if (pxt4_has_metadata_csum(dir->i_sb))
 		entry_space -= sizeof(struct dx_tail);
@@ -597,7 +597,7 @@ static inline unsigned dx_root_limit(struct inode *dir, unsigned infosize)
 
 static inline unsigned dx_node_limit(struct inode *dir)
 {
-	unsigned entry_space = dir->i_sb->s_blocksize - EXT4_DIR_REC_LEN(0);
+	unsigned entry_space = dir->i_sb->s_blocksize - PXT4_DIR_REC_LEN(0);
 
 	if (pxt4_has_metadata_csum(dir->i_sb))
 		entry_space -= sizeof(struct dx_tail);
@@ -709,7 +709,7 @@ static struct stats dx_show_leaf(struct inode *dir,
 				       (unsigned) ((char *) de - base));
 #endif
 			}
-			space += EXT4_DIR_REC_LEN(de->name_len);
+			space += PXT4_DIR_REC_LEN(de->name_len);
 			names++;
 		}
 		de = pxt4_next_entry(de, size);
@@ -773,9 +773,9 @@ dx_probe(struct pxt4_filename *fname, struct inode *dir,
 	struct dx_frame *ret_err = ERR_PTR(ERR_BAD_DX_DIR);
 	u32 hash;
 	pxt4_lblk_t block;
-	pxt4_lblk_t blocks[EXT4_HTREE_LEVEL];
+	pxt4_lblk_t blocks[PXT4_HTREE_LEVEL];
 
-	memset(frame_in, 0, EXT4_HTREE_LEVEL * sizeof(frame_in[0]));
+	memset(frame_in, 0, PXT4_HTREE_LEVEL * sizeof(frame_in[0]));
 	frame->bh = pxt4_read_dirblock(dir, 0, INDEX);
 	if (IS_ERR(frame->bh))
 		return (struct dx_frame *) frame->bh;
@@ -792,8 +792,8 @@ dx_probe(struct pxt4_filename *fname, struct inode *dir,
 		hinfo = &fname->hinfo;
 	hinfo->hash_version = root->info.hash_version;
 	if (hinfo->hash_version <= DX_HASH_TEA)
-		hinfo->hash_version += EXT4_SB(dir->i_sb)->s_hash_unsigned;
-	hinfo->seed = EXT4_SB(dir->i_sb)->s_hash_seed;
+		hinfo->hash_version += PXT4_SB(dir->i_sb)->s_hash_unsigned;
+	hinfo->seed = PXT4_SB(dir->i_sb)->s_hash_seed;
 	if (fname && fname_name(fname))
 		pxt4fs_dirhash(dir, fname_name(fname), fname_len(fname), hinfo);
 	hash = hinfo->hash;
@@ -810,7 +810,7 @@ dx_probe(struct pxt4_filename *fname, struct inode *dir,
 			     "Directory (ino: %lu) htree depth %#06x exceed"
 			     "supported value", dir->i_ino,
 			     pxt4_dir_htree_level(dir->i_sb));
-		if (pxt4_dir_htree_level(dir->i_sb) < EXT4_HTREE_LEVEL) {
+		if (pxt4_dir_htree_level(dir->i_sb) < PXT4_HTREE_LEVEL) {
 			pxt4_warning(dir->i_sb, "Enable large directory "
 						"feature to access it");
 		}
@@ -1033,7 +1033,7 @@ static int htree_dirblock_to_tree(struct file *dir_file,
 	de = (struct pxt4_dir_entry_2 *) bh->b_data;
 	top = (struct pxt4_dir_entry_2 *) ((char *) de +
 					   dir->i_sb->s_blocksize -
-					   EXT4_DIR_REC_LEN(0));
+					   PXT4_DIR_REC_LEN(0));
 #ifdef CONFIG_FS_ENCRYPTION
 	/* Check if the directory is encrypted */
 	if (IS_ENCRYPTED(dir)) {
@@ -1042,7 +1042,7 @@ static int htree_dirblock_to_tree(struct file *dir_file,
 			brelse(bh);
 			return err;
 		}
-		err = fscrypt_fname_alloc_buffer(dir, EXT4_NAME_LEN,
+		err = fscrypt_fname_alloc_buffer(dir, PXT4_NAME_LEN,
 						     &fname_crypto_str);
 		if (err < 0) {
 			brelse(bh);
@@ -1053,7 +1053,7 @@ static int htree_dirblock_to_tree(struct file *dir_file,
 	for (; de < top; de = pxt4_next_entry(de, dir->i_sb->s_blocksize)) {
 		if (pxt4_check_dir_entry(dir, NULL, de, bh,
 				bh->b_data, bh->b_size,
-				(block<<EXT4_BLOCK_SIZE_BITS(dir->i_sb))
+				(block<<PXT4_BLOCK_SIZE_BITS(dir->i_sb))
 					 + ((char *)de - bh->b_data))) {
 			/* silently ignore the rest of the block */
 			break;
@@ -1117,7 +1117,7 @@ int pxt4_htree_fill_tree(struct file *dir_file, __u32 start_hash,
 {
 	struct dx_hash_info hinfo;
 	struct pxt4_dir_entry_2 *de;
-	struct dx_frame frames[EXT4_HTREE_LEVEL], *frame;
+	struct dx_frame frames[PXT4_HTREE_LEVEL], *frame;
 	struct inode *dir;
 	pxt4_lblk_t block;
 	int count = 0;
@@ -1128,12 +1128,12 @@ int pxt4_htree_fill_tree(struct file *dir_file, __u32 start_hash,
 	dxtrace(printk(KERN_DEBUG "In htree_fill_tree, start hash: %x:%x\n",
 		       start_hash, start_minor_hash));
 	dir = file_inode(dir_file);
-	if (!(pxt4_test_inode_flag(dir, EXT4_INODE_INDEX))) {
-		hinfo.hash_version = EXT4_SB(dir->i_sb)->s_def_hash_version;
+	if (!(pxt4_test_inode_flag(dir, PXT4_INODE_INDEX))) {
+		hinfo.hash_version = PXT4_SB(dir->i_sb)->s_def_hash_version;
 		if (hinfo.hash_version <= DX_HASH_TEA)
 			hinfo.hash_version +=
-				EXT4_SB(dir->i_sb)->s_hash_unsigned;
-		hinfo.seed = EXT4_SB(dir->i_sb)->s_hash_seed;
+				PXT4_SB(dir->i_sb)->s_hash_unsigned;
+		hinfo.seed = PXT4_SB(dir->i_sb)->s_hash_seed;
 		if (pxt4_has_inline_data(dir)) {
 			int has_inline_data = 1;
 			count = pxt4_inlinedir_to_tree(dir_file, dir, 0,
@@ -1321,7 +1321,7 @@ static void dx_insert_block(struct dx_frame *frame, u32 hash, pxt4_lblk_t block)
 int pxt4_ci_compare(const struct inode *parent, const struct qstr *name,
 		    const struct qstr *entry, bool quick)
 {
-	const struct pxt4_sb_info *sbi = EXT4_SB(parent->i_sb);
+	const struct pxt4_sb_info *sbi = PXT4_SB(parent->i_sb);
 	const struct unicode_map *um = sbi->s_encoding;
 	int ret;
 
@@ -1351,18 +1351,18 @@ void pxt4_fname_setup_ci_filename(struct inode *dir, const struct qstr *iname,
 {
 	int len;
 
-	if (!IS_CASEFOLDED(dir) || !EXT4_SB(dir->i_sb)->s_encoding) {
+	if (!IS_CASEFOLDED(dir) || !PXT4_SB(dir->i_sb)->s_encoding) {
 		cf_name->name = NULL;
 		return;
 	}
 
-	cf_name->name = kmalloc(EXT4_NAME_LEN, GFP_NOFS);
+	cf_name->name = kmalloc(PXT4_NAME_LEN, GFP_NOFS);
 	if (!cf_name->name)
 		return;
 
-	len = utf8_casefold(EXT4_SB(dir->i_sb)->s_encoding,
+	len = utf8_casefold(PXT4_SB(dir->i_sb)->s_encoding,
 			    iname, cf_name->name,
-			    EXT4_NAME_LEN);
+			    PXT4_NAME_LEN);
 	if (len <= 0) {
 		kfree(cf_name->name);
 		cf_name->name = NULL;
@@ -1397,7 +1397,7 @@ static inline bool pxt4_match(const struct inode *parent,
 #endif
 
 #ifdef CONFIG_UNICODE
-	if (EXT4_SB(parent->i_sb)->s_encoding && IS_CASEFOLDED(parent)) {
+	if (PXT4_SB(parent->i_sb)->s_encoding && IS_CASEFOLDED(parent)) {
 		if (fname->cf_name.name) {
 			struct qstr cf = {.name = fname->cf_name.name,
 					  .len = fname->cf_name.len};
@@ -1424,7 +1424,7 @@ int pxt4_search_dir(struct buffer_head *bh, char *search_buf, int buf_size,
 
 	de = (struct pxt4_dir_entry_2 *)search_buf;
 	dlimit = search_buf + buf_size;
-	while ((char *) de < dlimit - EXT4_BASE_DIR_LEN) {
+	while ((char *) de < dlimit - PXT4_BASE_DIR_LEN) {
 		/* this code is executed quadratically often */
 		/* do minimal checking `by hand' */
 		if (de->name + de->name_len <= dlimit &&
@@ -1495,7 +1495,7 @@ static struct buffer_head *__pxt4_find_entry(struct inode *dir,
 	*res_dir = NULL;
 	sb = dir->i_sb;
 	namelen = fname->usr_fname->len;
-	if (namelen > EXT4_NAME_LEN)
+	if (namelen > PXT4_NAME_LEN)
 		return NULL;
 
 	if (pxt4_has_inline_data(dir)) {
@@ -1532,12 +1532,12 @@ static struct buffer_head *__pxt4_find_entry(struct inode *dir,
 			       "falling back\n"));
 		ret = NULL;
 	}
-	nblocks = dir->i_size >> EXT4_BLOCK_SIZE_BITS(sb);
+	nblocks = dir->i_size >> PXT4_BLOCK_SIZE_BITS(sb);
 	if (!nblocks) {
 		ret = NULL;
 		goto cleanup_and_exit;
 	}
-	start = EXT4_I(dir)->i_dir_start_lookup;
+	start = PXT4_I(dir)->i_dir_start_lookup;
 	if (start >= nblocks)
 		start = 0;
 	block = start;
@@ -1567,7 +1567,7 @@ restart:
 			goto next;
 		wait_on_buffer(bh);
 		if (!buffer_uptodate(bh)) {
-			EXT4_ERROR_INODE(dir, "reading directory lblock %lu",
+			PXT4_ERROR_INODE(dir, "reading directory lblock %lu",
 					 (unsigned long) block);
 			brelse(bh);
 			ret = ERR_PTR(-EIO);
@@ -1577,7 +1577,7 @@ restart:
 		    !is_dx_internal_node(dir, block,
 					 (struct pxt4_dir_entry *)bh->b_data) &&
 		    !pxt4_dirblock_csum_verify(dir, bh)) {
-			EXT4_ERROR_INODE(dir, "checksumming directory "
+			PXT4_ERROR_INODE(dir, "checksumming directory "
 					 "block %lu", (unsigned long)block);
 			brelse(bh);
 			ret = ERR_PTR(-EFSBADCRC);
@@ -1585,9 +1585,9 @@ restart:
 		}
 		set_buffer_verified(bh);
 		i = search_dirblock(bh, dir, fname,
-			    block << EXT4_BLOCK_SIZE_BITS(sb), res_dir);
+			    block << PXT4_BLOCK_SIZE_BITS(sb), res_dir);
 		if (i == 1) {
-			EXT4_I(dir)->i_dir_start_lookup = block;
+			PXT4_I(dir)->i_dir_start_lookup = block;
 			ret = bh;
 			goto cleanup_and_exit;
 		} else {
@@ -1605,7 +1605,7 @@ restart:
 	 * search the last part of the directory before giving up.
 	 */
 	block = nblocks;
-	nblocks = dir->i_size >> EXT4_BLOCK_SIZE_BITS(sb);
+	nblocks = dir->i_size >> PXT4_BLOCK_SIZE_BITS(sb);
 	if (block < nblocks) {
 		start = 0;
 		goto restart;
@@ -1664,7 +1664,7 @@ static struct buffer_head * pxt4_dx_find_entry(struct inode *dir,
 			struct pxt4_dir_entry_2 **res_dir)
 {
 	struct super_block * sb = dir->i_sb;
-	struct dx_frame frames[EXT4_HTREE_LEVEL], *frame;
+	struct dx_frame frames[PXT4_HTREE_LEVEL], *frame;
 	struct buffer_head *bh;
 	pxt4_lblk_t block;
 	int retval;
@@ -1682,7 +1682,7 @@ static struct buffer_head * pxt4_dx_find_entry(struct inode *dir,
 			goto errout;
 
 		retval = search_dirblock(bh, dir, fname,
-					 block << EXT4_BLOCK_SIZE_BITS(sb),
+					 block << PXT4_BLOCK_SIZE_BITS(sb),
 					 res_dir);
 		if (retval == 1)
 			goto success;
@@ -1718,7 +1718,7 @@ static struct dentry *pxt4_lookup(struct inode *dir, struct dentry *dentry, unsi
 	struct pxt4_dir_entry_2 *de;
 	struct buffer_head *bh;
 
-	if (dentry->d_name.len > EXT4_NAME_LEN)
+	if (dentry->d_name.len > PXT4_NAME_LEN)
 		return ERR_PTR(-ENAMETOOLONG);
 
 	bh = pxt4_lookup_entry(dir, dentry, &de);
@@ -1729,17 +1729,17 @@ static struct dentry *pxt4_lookup(struct inode *dir, struct dentry *dentry, unsi
 		__u32 ino = le32_to_cpu(de->inode);
 		brelse(bh);
 		if (!pxt4_valid_inum(dir->i_sb, ino)) {
-			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
+			PXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EFSCORRUPTED);
 		}
 		if (unlikely(ino == dir->i_ino)) {
-			EXT4_ERROR_INODE(dir, "'%pd' linked to parent dir",
+			PXT4_ERROR_INODE(dir, "'%pd' linked to parent dir",
 					 dentry);
 			return ERR_PTR(-EFSCORRUPTED);
 		}
-		inode = pxt4_iget(dir->i_sb, ino, EXT4_IGET_NORMAL);
+		inode = pxt4_iget(dir->i_sb, ino, PXT4_IGET_NORMAL);
 		if (inode == ERR_PTR(-ESTALE)) {
-			EXT4_ERROR_INODE(dir,
+			PXT4_ERROR_INODE(dir,
 					 "deleted inode referenced: %u",
 					 ino);
 			return ERR_PTR(-EFSCORRUPTED);
@@ -1785,12 +1785,12 @@ struct dentry *pxt4_get_parent(struct dentry *child)
 	brelse(bh);
 
 	if (!pxt4_valid_inum(child->d_sb, ino)) {
-		EXT4_ERROR_INODE(d_inode(child),
+		PXT4_ERROR_INODE(d_inode(child),
 				 "bad parent inode number: %u", ino);
 		return ERR_PTR(-EFSCORRUPTED);
 	}
 
-	return d_obtain_alias(pxt4_iget(child->d_sb, ino, EXT4_IGET_NORMAL));
+	return d_obtain_alias(pxt4_iget(child->d_sb, ino, PXT4_IGET_NORMAL));
 }
 
 /*
@@ -1806,7 +1806,7 @@ dx_move_dirents(char *from, char *to, struct dx_map_entry *map, int count,
 	while (count--) {
 		struct pxt4_dir_entry_2 *de = (struct pxt4_dir_entry_2 *)
 						(from + (map->offs<<2));
-		rec_len = EXT4_DIR_REC_LEN(de->name_len);
+		rec_len = PXT4_DIR_REC_LEN(de->name_len);
 		memcpy (to, de, rec_len);
 		((struct pxt4_dir_entry_2 *) to)->rec_len =
 				pxt4_rec_len_to_disk(rec_len, blocksize);
@@ -1830,7 +1830,7 @@ static struct pxt4_dir_entry_2* dx_pack_dirents(char *base, unsigned blocksize)
 	while ((char*)de < base + blocksize) {
 		next = pxt4_next_entry(de, blocksize);
 		if (de->inode && de->name_len) {
-			rec_len = EXT4_DIR_REC_LEN(de->name_len);
+			rec_len = PXT4_DIR_REC_LEN(de->name_len);
 			if (de > to)
 				memmove(to, de, rec_len);
 			to->rec_len = pxt4_rec_len_to_disk(rec_len, blocksize);
@@ -1974,7 +1974,7 @@ int pxt4_find_dest_de(struct inode *dir, struct inode *inode,
 		      struct pxt4_dir_entry_2 **dest_de)
 {
 	struct pxt4_dir_entry_2 *de;
-	unsigned short reclen = EXT4_DIR_REC_LEN(fname_len(fname));
+	unsigned short reclen = PXT4_DIR_REC_LEN(fname_len(fname));
 	int nlen, rlen;
 	unsigned int offset = 0;
 	char *top;
@@ -1987,7 +1987,7 @@ int pxt4_find_dest_de(struct inode *dir, struct inode *inode,
 			return -EFSCORRUPTED;
 		if (pxt4_match(dir, fname, de))
 			return -EEXIST;
-		nlen = EXT4_DIR_REC_LEN(de->name_len);
+		nlen = PXT4_DIR_REC_LEN(de->name_len);
 		rlen = pxt4_rec_len_from_disk(de->rec_len, buf_size);
 		if ((de->inode ? rlen - nlen : rlen) >= reclen)
 			break;
@@ -2009,7 +2009,7 @@ void pxt4_insert_dentry(struct inode *inode,
 
 	int nlen, rlen;
 
-	nlen = EXT4_DIR_REC_LEN(de->name_len);
+	nlen = PXT4_DIR_REC_LEN(de->name_len);
 	rlen = pxt4_rec_len_from_disk(de->rec_len, buf_size);
 	if (de->inode) {
 		struct pxt4_dir_entry_2 *de1 =
@@ -2018,7 +2018,7 @@ void pxt4_insert_dentry(struct inode *inode,
 		de->rec_len = pxt4_rec_len_to_disk(nlen, buf_size);
 		de = de1;
 	}
-	de->file_type = EXT4_FT_UNKNOWN;
+	de->file_type = PXT4_FT_UNKNOWN;
 	de->inode = cpu_to_le32(inode->i_ino);
 	pxt4_set_de_type(inode->i_sb, de, inode->i_mode);
 	de->name_len = fname_len(fname);
@@ -2093,7 +2093,7 @@ static int make_indexed_dir(handle_t *handle, struct pxt4_filename *fname,
 {
 	struct buffer_head *bh2;
 	struct dx_root	*root;
-	struct dx_frame	frames[EXT4_HTREE_LEVEL], *frame;
+	struct dx_frame	frames[PXT4_HTREE_LEVEL], *frame;
 	struct dx_entry *entries;
 	struct pxt4_dir_entry_2	*de, *de2;
 	char		*data2, *top;
@@ -2123,7 +2123,7 @@ static int make_indexed_dir(handle_t *handle, struct pxt4_filename *fname,
 	de = (struct pxt4_dir_entry_2 *)((char *)fde +
 		pxt4_rec_len_from_disk(fde->rec_len, blocksize));
 	if ((char *) de >= (((char *) root) + blocksize)) {
-		EXT4_ERROR_INODE(dir, "invalid rec_len for '..'");
+		PXT4_ERROR_INODE(dir, "invalid rec_len for '..'");
 		brelse(bh);
 		return -EFSCORRUPTED;
 	}
@@ -2135,7 +2135,7 @@ static int make_indexed_dir(handle_t *handle, struct pxt4_filename *fname,
 		brelse(bh);
 		return PTR_ERR(bh2);
 	}
-	pxt4_set_inode_flag(dir, EXT4_INODE_INDEX);
+	pxt4_set_inode_flag(dir, PXT4_INODE_INDEX);
 	data2 = bh2->b_data;
 
 	memcpy(data2, de, len);
@@ -2151,11 +2151,11 @@ static int make_indexed_dir(handle_t *handle, struct pxt4_filename *fname,
 
 	/* Initialize the root; the dot dirents already exist */
 	de = (struct pxt4_dir_entry_2 *) (&root->dotdot);
-	de->rec_len = pxt4_rec_len_to_disk(blocksize - EXT4_DIR_REC_LEN(2),
+	de->rec_len = pxt4_rec_len_to_disk(blocksize - PXT4_DIR_REC_LEN(2),
 					   blocksize);
 	memset (&root->info, 0, sizeof(root->info));
 	root->info.info_length = sizeof(root->info);
-	root->info.hash_version = EXT4_SB(dir->i_sb)->s_def_hash_version;
+	root->info.hash_version = PXT4_SB(dir->i_sb)->s_def_hash_version;
 	entries = root->entries;
 	dx_set_block(entries, 1);
 	dx_set_count(entries, 1);
@@ -2164,8 +2164,8 @@ static int make_indexed_dir(handle_t *handle, struct pxt4_filename *fname,
 	/* Initialize as for dx_probe */
 	fname->hinfo.hash_version = root->info.hash_version;
 	if (fname->hinfo.hash_version <= DX_HASH_TEA)
-		fname->hinfo.hash_version += EXT4_SB(dir->i_sb)->s_hash_unsigned;
-	fname->hinfo.seed = EXT4_SB(dir->i_sb)->s_hash_seed;
+		fname->hinfo.hash_version += PXT4_SB(dir->i_sb)->s_hash_unsigned;
+	fname->hinfo.seed = PXT4_SB(dir->i_sb)->s_hash_seed;
 	pxt4fs_dirhash(dir, fname_name(fname), fname_len(fname), &fname->hinfo);
 
 	memset(frames, 0, sizeof(frames));
@@ -2230,7 +2230,7 @@ static int pxt4_add_entry(handle_t *handle, struct dentry *dentry,
 		csum_size = sizeof(struct pxt4_dir_entry_tail);
 
 	sb = dir->i_sb;
-	sbi = EXT4_SB(sb);
+	sbi = PXT4_SB(sb);
 	blocksize = sb->s_blocksize;
 	if (!dentry->d_name.len)
 		return -EINVAL;
@@ -2264,12 +2264,12 @@ static int pxt4_add_entry(handle_t *handle, struct dentry *dentry,
 			goto out;
 		/* Can we just ignore htree data? */
 		if (pxt4_has_metadata_csum(sb)) {
-			EXT4_ERROR_INODE(dir,
+			PXT4_ERROR_INODE(dir,
 				"Directory has corrupted htree index.");
 			retval = -EFSCORRUPTED;
 			goto out;
 		}
-		pxt4_clear_inode_flag(dir, EXT4_INODE_INDEX);
+		pxt4_clear_inode_flag(dir, PXT4_INODE_INDEX);
 		dx_fallback++;
 		pxt4_mark_inode_dirty(handle, dir);
 	}
@@ -2278,7 +2278,7 @@ static int pxt4_add_entry(handle_t *handle, struct dentry *dentry,
 		bh = pxt4_read_dirblock(dir, block, DIRENT);
 		if (bh == NULL) {
 			bh = pxt4_bread(handle, dir, block,
-					EXT4_GET_BLOCKS_CREATE);
+					PXT4_GET_BLOCKS_CREATE);
 			goto add_to_new_block;
 		}
 		if (IS_ERR(bh)) {
@@ -2319,7 +2319,7 @@ out:
 	pxt4_fname_free_filename(&fname);
 	brelse(bh);
 	if (retval == 0)
-		pxt4_set_inode_state(inode, EXT4_STATE_NEWENTRY);
+		pxt4_set_inode_state(inode, PXT4_STATE_NEWENTRY);
 	return retval;
 }
 
@@ -2329,7 +2329,7 @@ out:
 static int pxt4_dx_add_entry(handle_t *handle, struct pxt4_filename *fname,
 			     struct inode *dir, struct inode *inode)
 {
-	struct dx_frame frames[EXT4_HTREE_LEVEL], *frame;
+	struct dx_frame frames[PXT4_HTREE_LEVEL], *frame;
 	struct dx_entry *entries, *at;
 	struct buffer_head *bh;
 	struct super_block *sb = dir->i_sb;
@@ -2389,7 +2389,7 @@ again:
 			pxt4_warning(sb, "Directory (ino: %lu) index full, "
 					 "reach max htree level :%d",
 					 dir->i_ino, levels);
-			if (pxt4_dir_htree_level(sb) < EXT4_HTREE_LEVEL) {
+			if (pxt4_dir_htree_level(sb) < PXT4_HTREE_LEVEL) {
 				pxt4_warning(sb, "Large directory feature is "
 						 "not enabled on this "
 						 "filesystem");
@@ -2581,7 +2581,7 @@ out:
 }
 
 /*
- * Set directory link count to 1 if nlinks > EXT4_LINK_MAX, or if nlinks == 2
+ * Set directory link count to 1 if nlinks > PXT4_LINK_MAX, or if nlinks == 2
  * since this indicates that nlinks count was previously 1 to avoid overflowing
  * the 16-bit i_links_count field on disk.  Directories with i_nlink == 1 mean
  * that subdirectory link counts are not being maintained accurately.
@@ -2595,13 +2595,13 @@ static void pxt4_inc_count(handle_t *handle, struct inode *inode)
 {
 	inc_nlink(inode);
 	if (is_dx(inode) &&
-	    (inode->i_nlink > EXT4_LINK_MAX || inode->i_nlink == 2))
+	    (inode->i_nlink > PXT4_LINK_MAX || inode->i_nlink == 2))
 		set_nlink(inode, 1);
 }
 
 /*
  * If a directory had nlink == 1, then we should let it be 1. This indicates
- * directory has >EXT4_LINK_MAX subdirs.
+ * directory has >PXT4_LINK_MAX subdirs.
  */
 static void pxt4_dec_count(handle_t *handle, struct inode *inode)
 {
@@ -2644,11 +2644,11 @@ static int pxt4_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 	if (err)
 		return err;
 
-	credits = (EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
+	credits = (PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+		   PXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = pxt4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, EXT4_HT_DIR, credits);
+					    NULL, PXT4_HT_DIR, credits);
 	handle = pxt4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2677,11 +2677,11 @@ static int pxt4_mknod(struct inode *dir, struct dentry *dentry,
 	if (err)
 		return err;
 
-	credits = (EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
+	credits = (PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+		   PXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = pxt4_new_inode_start_handle(dir, mode, &dentry->d_name, 0,
-					    NULL, EXT4_HT_DIR, credits);
+					    NULL, PXT4_HT_DIR, credits);
 	handle = pxt4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2711,9 +2711,9 @@ static int pxt4_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 retry:
 	inode = pxt4_new_inode_start_handle(dir, mode,
 					    NULL, 0, NULL,
-					    EXT4_HT_DIR,
-			EXT4_MAXQUOTAS_INIT_BLOCKS(dir->i_sb) +
-			  4 + EXT4_XATTR_TRANS_BLOCKS);
+					    PXT4_HT_DIR,
+			PXT4_MAXQUOTAS_INIT_BLOCKS(dir->i_sb) +
+			  4 + PXT4_XATTR_TRANS_BLOCKS);
 	handle = pxt4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (!IS_ERR(inode)) {
@@ -2745,7 +2745,7 @@ struct pxt4_dir_entry_2 *pxt4_init_dot_dotdot(struct inode *inode,
 {
 	de->inode = cpu_to_le32(inode->i_ino);
 	de->name_len = 1;
-	de->rec_len = pxt4_rec_len_to_disk(EXT4_DIR_REC_LEN(de->name_len),
+	de->rec_len = pxt4_rec_len_to_disk(PXT4_DIR_REC_LEN(de->name_len),
 					   blocksize);
 	strcpy(de->name, ".");
 	pxt4_set_de_type(inode->i_sb, de, S_IFDIR);
@@ -2755,11 +2755,11 @@ struct pxt4_dir_entry_2 *pxt4_init_dot_dotdot(struct inode *inode,
 	de->name_len = 2;
 	if (!dotdot_real_len)
 		de->rec_len = pxt4_rec_len_to_disk(blocksize -
-					(csum_size + EXT4_DIR_REC_LEN(1)),
+					(csum_size + PXT4_DIR_REC_LEN(1)),
 					blocksize);
 	else
 		de->rec_len = pxt4_rec_len_to_disk(
-				EXT4_DIR_REC_LEN(de->name_len), blocksize);
+				PXT4_DIR_REC_LEN(de->name_len), blocksize);
 	strcpy(de->name, "..");
 	pxt4_set_de_type(inode->i_sb, de, S_IFDIR);
 
@@ -2779,7 +2779,7 @@ static int pxt4_init_new_dir(handle_t *handle, struct inode *dir,
 	if (pxt4_has_metadata_csum(dir->i_sb))
 		csum_size = sizeof(struct pxt4_dir_entry_tail);
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+	if (pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA)) {
 		err = pxt4_try_create_inline_dir(handle, dir, inode);
 		if (err < 0 && err != -ENOSPC)
 			goto out;
@@ -2813,19 +2813,19 @@ static int pxt4_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	struct inode *inode;
 	int err, credits, retries = 0;
 
-	if (EXT4_DIR_LINK_MAX(dir))
+	if (PXT4_DIR_LINK_MAX(dir))
 		return -EMLINK;
 
 	err = dquot_initialize(dir);
 	if (err)
 		return err;
 
-	credits = (EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
+	credits = (PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+		   PXT4_INDEX_EXTRA_TRANS_BLOCKS + 3);
 retry:
 	inode = pxt4_new_inode_start_handle(dir, S_IFDIR | mode,
 					    &dentry->d_name,
-					    0, NULL, EXT4_HT_DIR, credits);
+					    0, NULL, PXT4_HT_DIR, credits);
 	handle = pxt4_journal_current_handle();
 	err = PTR_ERR(inode);
 	if (IS_ERR(inode))
@@ -2884,8 +2884,8 @@ bool pxt4_empty_dir(struct inode *inode)
 	}
 
 	sb = inode->i_sb;
-	if (inode->i_size < EXT4_DIR_REC_LEN(1) + EXT4_DIR_REC_LEN(2)) {
-		EXT4_ERROR_INODE(inode, "invalid size");
+	if (inode->i_size < PXT4_DIR_REC_LEN(1) + PXT4_DIR_REC_LEN(2)) {
+		PXT4_ERROR_INODE(inode, "invalid size");
 		return true;
 	}
 	/* The first directory block must not be a hole,
@@ -2917,7 +2917,7 @@ bool pxt4_empty_dir(struct inode *inode)
 		if (!(offset & (sb->s_blocksize - 1))) {
 			unsigned int lblock;
 			brelse(bh);
-			lblock = offset >> EXT4_BLOCK_SIZE_BITS(sb);
+			lblock = offset >> PXT4_BLOCK_SIZE_BITS(sb);
 			bh = pxt4_read_dirblock(inode, lblock, EITHER);
 			if (bh == NULL) {
 				offset += sb->s_blocksize;
@@ -2955,7 +2955,7 @@ bool pxt4_empty_dir(struct inode *inode)
 int pxt4_orphan_add(handle_t *handle, struct inode *inode)
 {
 	struct super_block *sb = inode->i_sb;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct pxt4_iloc iloc;
 	int err = 0, rc;
 	bool dirty = false;
@@ -2969,7 +2969,7 @@ int pxt4_orphan_add(handle_t *handle, struct inode *inode)
 	 * Exit early if inode already is on orphan list. This is a big speedup
 	 * since we don't have to contend on the global s_orphan_lock.
 	 */
-	if (!list_empty(&EXT4_I(inode)->i_orphan))
+	if (!list_empty(&PXT4_I(inode)->i_orphan))
 		return 0;
 
 	/*
@@ -3002,7 +3002,7 @@ int pxt4_orphan_add(handle_t *handle, struct inode *inode)
 		sbi->s_es->s_last_orphan = cpu_to_le32(inode->i_ino);
 		dirty = true;
 	}
-	list_add(&EXT4_I(inode)->i_orphan, &sbi->s_orphan);
+	list_add(&PXT4_I(inode)->i_orphan, &sbi->s_orphan);
 	mutex_unlock(&sbi->s_orphan_lock);
 
 	if (dirty) {
@@ -3017,7 +3017,7 @@ int pxt4_orphan_add(handle_t *handle, struct inode *inode)
 			 * list entries can cause panics at unmount time.
 			 */
 			mutex_lock(&sbi->s_orphan_lock);
-			list_del_init(&EXT4_I(inode)->i_orphan);
+			list_del_init(&PXT4_I(inode)->i_orphan);
 			mutex_unlock(&sbi->s_orphan_lock);
 		}
 	} else
@@ -3038,13 +3038,13 @@ out:
 int pxt4_orphan_del(handle_t *handle, struct inode *inode)
 {
 	struct list_head *prev;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	__u32 ino_next;
 	struct pxt4_iloc iloc;
 	int err = 0;
 
-	if (!sbi->s_journal && !(sbi->s_mount_state & EXT4_ORPHAN_FS))
+	if (!sbi->s_journal && !(sbi->s_mount_state & PXT4_ORPHAN_FS))
 		return 0;
 
 	WARN_ON_ONCE(!(inode->i_state & (I_NEW | I_FREEING)) &&
@@ -3122,7 +3122,7 @@ static int pxt4_rmdir(struct inode *dir, struct dentry *dentry)
 	struct pxt4_dir_entry_2 *de;
 	handle_t *handle = NULL;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(dir->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(dir->i_sb))))
 		return -EIO;
 
 	/* Initialize quotas before so that eventual writes go in
@@ -3151,8 +3151,8 @@ static int pxt4_rmdir(struct inode *dir, struct dentry *dentry)
 	if (!pxt4_empty_dir(inode))
 		goto end_rmdir;
 
-	handle = pxt4_journal_start(dir, EXT4_HT_DIR,
-				    EXT4_DATA_TRANS_BLOCKS(dir->i_sb));
+	handle = pxt4_journal_start(dir, PXT4_HT_DIR,
+				    PXT4_DATA_TRANS_BLOCKS(dir->i_sb));
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		handle = NULL;
@@ -3165,7 +3165,7 @@ static int pxt4_rmdir(struct inode *dir, struct dentry *dentry)
 	retval = pxt4_delete_entry(handle, dir, de, bh);
 	if (retval)
 		goto end_rmdir;
-	if (!EXT4_DIR_LINK_EMPTY(inode))
+	if (!PXT4_DIR_LINK_EMPTY(inode))
 		pxt4_warning_inode(inode,
 			     "empty directory '%.*s' has too many links (%u)",
 			     dentry->d_name.len, dentry->d_name.name,
@@ -3209,7 +3209,7 @@ static int pxt4_unlink(struct inode *dir, struct dentry *dentry)
 	struct pxt4_dir_entry_2 *de;
 	handle_t *handle = NULL;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(dir->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(dir->i_sb))))
 		return -EIO;
 
 	trace_pxt4_unlink_enter(dir, dentry);
@@ -3235,8 +3235,8 @@ static int pxt4_unlink(struct inode *dir, struct dentry *dentry)
 	if (le32_to_cpu(de->inode) != inode->i_ino)
 		goto end_unlink;
 
-	handle = pxt4_journal_start(dir, EXT4_HT_DIR,
-				    EXT4_DATA_TRANS_BLOCKS(dir->i_sb));
+	handle = pxt4_journal_start(dir, PXT4_HT_DIR,
+				    PXT4_DATA_TRANS_BLOCKS(dir->i_sb));
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		handle = NULL;
@@ -3290,7 +3290,7 @@ static int pxt4_symlink(struct inode *dir,
 	int credits;
 	struct fscrypt_str disk_link;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(dir->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(dir->i_sb))))
 		return -EIO;
 
 	err = fscrypt_prepare_symlink(dir, symname, len, dir->i_sb->s_blocksize,
@@ -3302,29 +3302,29 @@ static int pxt4_symlink(struct inode *dir,
 	if (err)
 		return err;
 
-	if ((disk_link.len > EXT4_N_BLOCKS * 4)) {
+	if ((disk_link.len > PXT4_N_BLOCKS * 4)) {
 		/*
 		 * For non-fast symlinks, we just allocate inode and put it on
 		 * orphan list in the first transaction => we need bitmap,
 		 * group descriptor, sb, inode block, quota blocks, and
 		 * possibly selinux xattr blocks.
 		 */
-		credits = 4 + EXT4_MAXQUOTAS_INIT_BLOCKS(dir->i_sb) +
-			  EXT4_XATTR_TRANS_BLOCKS;
+		credits = 4 + PXT4_MAXQUOTAS_INIT_BLOCKS(dir->i_sb) +
+			  PXT4_XATTR_TRANS_BLOCKS;
 	} else {
 		/*
 		 * Fast symlink. We have to add entry to directory
-		 * (EXT4_DATA_TRANS_BLOCKS + EXT4_INDEX_EXTRA_TRANS_BLOCKS),
+		 * (PXT4_DATA_TRANS_BLOCKS + PXT4_INDEX_EXTRA_TRANS_BLOCKS),
 		 * allocate new inode (bitmap, group descriptor, inode block,
 		 * quota blocks, sb is already counted in previous macros).
 		 */
-		credits = EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-			  EXT4_INDEX_EXTRA_TRANS_BLOCKS + 3;
+		credits = PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+			  PXT4_INDEX_EXTRA_TRANS_BLOCKS + 3;
 	}
 
 	inode = pxt4_new_inode_start_handle(dir, S_IFLNK|S_IRWXUGO,
 					    &dentry->d_name, 0, NULL,
-					    EXT4_HT_DIR, credits);
+					    PXT4_HT_DIR, credits);
 	handle = pxt4_journal_current_handle();
 	if (IS_ERR(inode)) {
 		if (handle)
@@ -3339,7 +3339,7 @@ static int pxt4_symlink(struct inode *dir,
 		inode->i_op = &pxt4_encrypted_symlink_inode_operations;
 	}
 
-	if ((disk_link.len > EXT4_N_BLOCKS * 4)) {
+	if ((disk_link.len > PXT4_N_BLOCKS * 4)) {
 		if (!IS_ENCRYPTED(inode))
 			inode->i_op = &pxt4_symlink_inode_operations;
 		inode_nohighmem(inode);
@@ -3364,12 +3364,12 @@ static int pxt4_symlink(struct inode *dir,
 		if (err)
 			goto err_drop_inode;
 		/*
-		 * Now inode is being linked into dir (EXT4_DATA_TRANS_BLOCKS
-		 * + EXT4_INDEX_EXTRA_TRANS_BLOCKS), inode is also modified
+		 * Now inode is being linked into dir (PXT4_DATA_TRANS_BLOCKS
+		 * + PXT4_INDEX_EXTRA_TRANS_BLOCKS), inode is also modified
 		 */
-		handle = pxt4_journal_start(dir, EXT4_HT_DIR,
-				EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-				EXT4_INDEX_EXTRA_TRANS_BLOCKS + 1);
+		handle = pxt4_journal_start(dir, PXT4_HT_DIR,
+				PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+				PXT4_INDEX_EXTRA_TRANS_BLOCKS + 1);
 		if (IS_ERR(handle)) {
 			err = PTR_ERR(handle);
 			handle = NULL;
@@ -3381,16 +3381,16 @@ static int pxt4_symlink(struct inode *dir,
 			goto err_drop_inode;
 	} else {
 		/* clear the extent format for fast symlink */
-		pxt4_clear_inode_flag(inode, EXT4_INODE_EXTENTS);
+		pxt4_clear_inode_flag(inode, PXT4_INODE_EXTENTS);
 		if (!IS_ENCRYPTED(inode)) {
 			inode->i_op = &pxt4_fast_symlink_inode_operations;
-			inode->i_link = (char *)&EXT4_I(inode)->i_data;
+			inode->i_link = (char *)&PXT4_I(inode)->i_data;
 		}
-		memcpy((char *)&EXT4_I(inode)->i_data, disk_link.name,
+		memcpy((char *)&PXT4_I(inode)->i_data, disk_link.name,
 		       disk_link.len);
 		inode->i_size = disk_link.len - 1;
 	}
-	EXT4_I(inode)->i_disksize = inode->i_size;
+	PXT4_I(inode)->i_disksize = inode->i_size;
 	err = pxt4_add_nondir(handle, dentry, inode);
 	if (!err && IS_DIRSYNC(dir))
 		pxt4_handle_sync(handle);
@@ -3418,16 +3418,16 @@ static int pxt4_link(struct dentry *old_dentry,
 	struct inode *inode = d_inode(old_dentry);
 	int err, retries = 0;
 
-	if (inode->i_nlink >= EXT4_LINK_MAX)
+	if (inode->i_nlink >= PXT4_LINK_MAX)
 		return -EMLINK;
 
 	err = fscrypt_prepare_link(old_dentry, dir, dentry);
 	if (err)
 		return err;
 
-	if ((pxt4_test_inode_flag(dir, EXT4_INODE_PROJINHERIT)) &&
-	    (!projid_eq(EXT4_I(dir)->i_projid,
-			EXT4_I(old_dentry->d_inode)->i_projid)))
+	if ((pxt4_test_inode_flag(dir, PXT4_INODE_PROJINHERIT)) &&
+	    (!projid_eq(PXT4_I(dir)->i_projid,
+			PXT4_I(old_dentry->d_inode)->i_projid)))
 		return -EXDEV;
 
 	err = dquot_initialize(dir);
@@ -3435,9 +3435,9 @@ static int pxt4_link(struct dentry *old_dentry,
 		return err;
 
 retry:
-	handle = pxt4_journal_start(dir, EXT4_HT_DIR,
-		(EXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
-		 EXT4_INDEX_EXTRA_TRANS_BLOCKS) + 1);
+	handle = pxt4_journal_start(dir, PXT4_HT_DIR,
+		(PXT4_DATA_TRANS_BLOCKS(dir->i_sb) +
+		 PXT4_INDEX_EXTRA_TRANS_BLOCKS) + 1);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -3499,7 +3499,7 @@ static struct buffer_head *pxt4_get_first_dir_block(handle_t *handle,
 					 bh->b_size, 0) ||
 		    le32_to_cpu(de->inode) != inode->i_ino ||
 		    strcmp(".", de->name)) {
-			EXT4_ERROR_INODE(inode, "directory missing '.'");
+			PXT4_ERROR_INODE(inode, "directory missing '.'");
 			brelse(bh);
 			*retval = -EFSCORRUPTED;
 			return NULL;
@@ -3510,7 +3510,7 @@ static struct buffer_head *pxt4_get_first_dir_block(handle_t *handle,
 		if (pxt4_check_dir_entry(inode, NULL, de, bh, bh->b_data,
 					 bh->b_size, offset) ||
 		    le32_to_cpu(de->inode) == 0 || strcmp("..", de->name)) {
-			EXT4_ERROR_INODE(inode, "directory missing '..'");
+			PXT4_ERROR_INODE(inode, "directory missing '..'");
 			brelse(bh);
 			*retval = -EFSCORRUPTED;
 			return NULL;
@@ -3707,12 +3707,12 @@ static struct inode *pxt4_whiteout_for_rename(struct pxt4_renament *ent,
 	 * for inode block, sb block, group summaries,
 	 * and inode bitmap
 	 */
-	credits += (EXT4_MAXQUOTAS_TRANS_BLOCKS(ent->dir->i_sb) +
-		    EXT4_XATTR_TRANS_BLOCKS + 4);
+	credits += (PXT4_MAXQUOTAS_TRANS_BLOCKS(ent->dir->i_sb) +
+		    PXT4_XATTR_TRANS_BLOCKS + 4);
 retry:
 	wh = pxt4_new_inode_start_handle(ent->dir, S_IFCHR | WHITEOUT_MODE,
 					 &ent->dentry->d_name, 0, NULL,
-					 EXT4_HT_DIR, credits);
+					 PXT4_HT_DIR, credits);
 
 	handle = pxt4_journal_current_handle();
 	if (IS_ERR(wh)) {
@@ -3759,14 +3759,14 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 	u8 old_file_type;
 
 	if (new.inode && new.inode->i_nlink == 0) {
-		EXT4_ERROR_INODE(new.inode,
+		PXT4_ERROR_INODE(new.inode,
 				 "target of rename is already freed");
 		return -EFSCORRUPTED;
 	}
 
-	if ((pxt4_test_inode_flag(new_dir, EXT4_INODE_PROJINHERIT)) &&
-	    (!projid_eq(EXT4_I(new_dir)->i_projid,
-			EXT4_I(old_dentry->d_inode)->i_projid)))
+	if ((pxt4_test_inode_flag(new_dir, PXT4_INODE_PROJINHERIT)) &&
+	    (!projid_eq(PXT4_I(new_dir)->i_projid,
+			PXT4_I(old_dentry->d_inode)->i_projid)))
 		return -EXDEV;
 
 	retval = dquot_initialize(old.dir);
@@ -3813,10 +3813,10 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (new.inode && !test_opt(new.dir->i_sb, NO_AUTO_DA_ALLOC))
 		pxt4_alloc_da_blocks(old.inode);
 
-	credits = (2 * EXT4_DATA_TRANS_BLOCKS(old.dir->i_sb) +
-		   EXT4_INDEX_EXTRA_TRANS_BLOCKS + 2);
+	credits = (2 * PXT4_DATA_TRANS_BLOCKS(old.dir->i_sb) +
+		   PXT4_INDEX_EXTRA_TRANS_BLOCKS + 2);
 	if (!(flags & RENAME_WHITEOUT)) {
-		handle = pxt4_journal_start(old.dir, EXT4_HT_DIR, credits);
+		handle = pxt4_journal_start(old.dir, PXT4_HT_DIR, credits);
 		if (IS_ERR(handle)) {
 			retval = PTR_ERR(handle);
 			goto release_bh;
@@ -3840,7 +3840,7 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 				goto end_rename;
 		} else {
 			retval = -EMLINK;
-			if (new.dir != old.dir && EXT4_DIR_LINK_MAX(new.dir))
+			if (new.dir != old.dir && PXT4_DIR_LINK_MAX(new.dir))
 				goto end_rename;
 		}
 		retval = pxt4_rename_dir_prepare(handle, &old);
@@ -3855,7 +3855,7 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 	 * from what is now the extent tree root (or a block map).
 	 */
 	force_reread = (new.dir->i_ino == old.dir->i_ino &&
-			pxt4_test_inode_flag(new.dir, EXT4_INODE_INLINE_DATA));
+			pxt4_test_inode_flag(new.dir, PXT4_INODE_INLINE_DATA));
 
 	if (whiteout) {
 		/*
@@ -3863,7 +3863,7 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 		 * to be still pointing to the valid old entry.
 		 */
 		retval = pxt4_setent(handle, &old, whiteout->i_ino,
-				     EXT4_FT_CHRDEV);
+				     PXT4_FT_CHRDEV);
 		if (retval)
 			goto end_rename;
 		pxt4_mark_inode_dirty(handle, whiteout);
@@ -3880,7 +3880,7 @@ static int pxt4_rename(struct inode *old_dir, struct dentry *old_dentry,
 	}
 	if (force_reread)
 		force_reread = !pxt4_test_inode_flag(new.dir,
-						     EXT4_INODE_INLINE_DATA);
+						     PXT4_INODE_INLINE_DATA);
 
 	/*
 	 * Like most other Unix systems, set the ctime for inodes on a
@@ -3966,12 +3966,12 @@ static int pxt4_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 	int retval;
 	struct timespec64 ctime;
 
-	if ((pxt4_test_inode_flag(new_dir, EXT4_INODE_PROJINHERIT) &&
-	     !projid_eq(EXT4_I(new_dir)->i_projid,
-			EXT4_I(old_dentry->d_inode)->i_projid)) ||
-	    (pxt4_test_inode_flag(old_dir, EXT4_INODE_PROJINHERIT) &&
-	     !projid_eq(EXT4_I(old_dir)->i_projid,
-			EXT4_I(new_dentry->d_inode)->i_projid)))
+	if ((pxt4_test_inode_flag(new_dir, PXT4_INODE_PROJINHERIT) &&
+	     !projid_eq(PXT4_I(new_dir)->i_projid,
+			PXT4_I(old_dentry->d_inode)->i_projid)) ||
+	    (pxt4_test_inode_flag(old_dir, PXT4_INODE_PROJINHERIT) &&
+	     !projid_eq(PXT4_I(old_dir)->i_projid,
+			PXT4_I(new_dentry->d_inode)->i_projid)))
 		return -EXDEV;
 
 	retval = dquot_initialize(old.dir);
@@ -4007,9 +4007,9 @@ static int pxt4_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (!new.bh || le32_to_cpu(new.de->inode) != new.inode->i_ino)
 		goto end_rename;
 
-	handle = pxt4_journal_start(old.dir, EXT4_HT_DIR,
-		(2 * EXT4_DATA_TRANS_BLOCKS(old.dir->i_sb) +
-		 2 * EXT4_INDEX_EXTRA_TRANS_BLOCKS + 2));
+	handle = pxt4_journal_start(old.dir, PXT4_HT_DIR,
+		(2 * PXT4_DATA_TRANS_BLOCKS(old.dir->i_sb) +
+		 2 * PXT4_INDEX_EXTRA_TRANS_BLOCKS + 2));
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		handle = NULL;
@@ -4040,8 +4040,8 @@ static int pxt4_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 		old.dir_nlink_delta = old.is_dir ? -1 : 1;
 		new.dir_nlink_delta = -old.dir_nlink_delta;
 		retval = -EMLINK;
-		if ((old.dir_nlink_delta > 0 && EXT4_DIR_LINK_MAX(old.dir)) ||
-		    (new.dir_nlink_delta > 0 && EXT4_DIR_LINK_MAX(new.dir)))
+		if ((old.dir_nlink_delta > 0 && PXT4_DIR_LINK_MAX(old.dir)) ||
+		    (new.dir_nlink_delta > 0 && PXT4_DIR_LINK_MAX(new.dir)))
 			goto end_rename;
 	}
 
@@ -4094,7 +4094,7 @@ static int pxt4_rename2(struct inode *old_dir, struct dentry *old_dentry,
 {
 	int err;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(old_dir->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(old_dir->i_sb))))
 		return -EIO;
 
 	if (flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE | RENAME_WHITEOUT))

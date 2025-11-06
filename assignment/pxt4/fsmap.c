@@ -86,7 +86,7 @@ static int pxt4_getfsmap_helper(struct super_block *sb,
 				struct pxt4_fsmap *rec)
 {
 	struct pxt4_fsmap fmr;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_fsblk_t rec_fsblk = rec->fmr_physical;
 	pxt4_group_t agno;
 	pxt4_grpblk_t cno;
@@ -103,26 +103,26 @@ static int pxt4_getfsmap_helper(struct super_block *sb,
 		rec_fsblk += rec->fmr_length;
 		if (info->gfi_next_fsblk < rec_fsblk)
 			info->gfi_next_fsblk = rec_fsblk;
-		return EXT4_QUERY_RANGE_CONTINUE;
+		return PXT4_QUERY_RANGE_CONTINUE;
 	}
 
 	/* Are we just counting mappings? */
 	if (info->gfi_head->fmh_count == 0) {
 		if (info->gfi_head->fmh_entries == UINT_MAX)
-			return EXT4_QUERY_RANGE_ABORT;
+			return PXT4_QUERY_RANGE_ABORT;
 
 		if (rec_fsblk > info->gfi_next_fsblk)
 			info->gfi_head->fmh_entries++;
 
 		if (info->gfi_last)
-			return EXT4_QUERY_RANGE_CONTINUE;
+			return PXT4_QUERY_RANGE_CONTINUE;
 
 		info->gfi_head->fmh_entries++;
 
 		rec_fsblk += rec->fmr_length;
 		if (info->gfi_next_fsblk < rec_fsblk)
 			info->gfi_next_fsblk = rec_fsblk;
-		return EXT4_QUERY_RANGE_CONTINUE;
+		return PXT4_QUERY_RANGE_CONTINUE;
 	}
 
 	/*
@@ -132,18 +132,18 @@ static int pxt4_getfsmap_helper(struct super_block *sb,
 	 */
 	if (rec_fsblk > info->gfi_next_fsblk) {
 		if (info->gfi_head->fmh_entries >= info->gfi_head->fmh_count)
-			return EXT4_QUERY_RANGE_ABORT;
+			return PXT4_QUERY_RANGE_ABORT;
 
 		pxt4_get_group_no_and_offset(sb, info->gfi_next_fsblk,
 				&agno, &cno);
 		trace_pxt4_fsmap_mapping(sb, info->gfi_dev, agno,
-				EXT4_C2B(sbi, cno),
+				PXT4_C2B(sbi, cno),
 				rec_fsblk - info->gfi_next_fsblk,
-				EXT4_FMR_OWN_UNKNOWN);
+				PXT4_FMR_OWN_UNKNOWN);
 
 		fmr.fmr_device = info->gfi_dev;
 		fmr.fmr_physical = info->gfi_next_fsblk;
-		fmr.fmr_owner = EXT4_FMR_OWN_UNKNOWN;
+		fmr.fmr_owner = PXT4_FMR_OWN_UNKNOWN;
 		fmr.fmr_length = rec_fsblk - info->gfi_next_fsblk;
 		fmr.fmr_flags = FMR_OF_SPECIAL_OWNER;
 		error = info->gfi_formatter(&fmr, info->gfi_format_arg);
@@ -157,10 +157,10 @@ static int pxt4_getfsmap_helper(struct super_block *sb,
 
 	/* Fill out the extent we found */
 	if (info->gfi_head->fmh_entries >= info->gfi_head->fmh_count)
-		return EXT4_QUERY_RANGE_ABORT;
+		return PXT4_QUERY_RANGE_ABORT;
 
 	pxt4_get_group_no_and_offset(sb, rec_fsblk, &agno, &cno);
-	trace_pxt4_fsmap_mapping(sb, info->gfi_dev, agno, EXT4_C2B(sbi, cno),
+	trace_pxt4_fsmap_mapping(sb, info->gfi_dev, agno, PXT4_C2B(sbi, cno),
 			rec->fmr_length, rec->fmr_owner);
 
 	fmr.fmr_device = info->gfi_dev;
@@ -177,7 +177,7 @@ out:
 	rec_fsblk += rec->fmr_length;
 	if (info->gfi_next_fsblk < rec_fsblk)
 		info->gfi_next_fsblk = rec_fsblk;
-	return EXT4_QUERY_RANGE_CONTINUE;
+	return PXT4_QUERY_RANGE_CONTINUE;
 }
 
 static inline pxt4_fsblk_t pxt4_fsmap_next_pblk(struct pxt4_fsmap *fmr)
@@ -194,13 +194,13 @@ static int pxt4_getfsmap_datadev_helper(struct super_block *sb,
 	struct pxt4_getfsmap_info *info = priv;
 	struct pxt4_fsmap *p;
 	struct pxt4_fsmap *tmp;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_fsblk_t fsb;
 	pxt4_fsblk_t fslen;
 	int error;
 
-	fsb = (EXT4_C2B(sbi, start) + pxt4_group_first_block_no(sb, agno));
-	fslen = EXT4_C2B(sbi, len);
+	fsb = (PXT4_C2B(sbi, start) + pxt4_group_first_block_no(sb, agno));
+	fslen = PXT4_C2B(sbi, len);
 
 	/* If the retained free extent record is set... */
 	if (info->gfi_lastfree.fmr_owner) {
@@ -238,7 +238,7 @@ static int pxt4_getfsmap_datadev_helper(struct super_block *sb,
 	irec.fmr_device = 0;
 	irec.fmr_physical = fsb;
 	irec.fmr_length = fslen;
-	irec.fmr_owner = EXT4_FMR_OWN_FREE;
+	irec.fmr_owner = PXT4_FMR_OWN_FREE;
 	irec.fmr_flags = 0;
 
 	/* If this is a free extent at the end of a bg, buffer it. */
@@ -256,7 +256,7 @@ static int pxt4_getfsmap_datadev_helper(struct super_block *sb,
 static int pxt4_getfsmap_logdev(struct super_block *sb, struct pxt4_fsmap *keys,
 				struct pxt4_getfsmap_info *info)
 {
-	journal_t *journal = EXT4_SB(sb)->s_journal;
+	journal_t *journal = PXT4_SB(sb)->s_journal;
 	struct pxt4_fsmap irec;
 
 	/* Set up search keys */
@@ -281,7 +281,7 @@ static int pxt4_getfsmap_logdev(struct super_block *sb, struct pxt4_fsmap *keys,
 	/* Fabricate an rmap entry for the external log device. */
 	irec.fmr_physical = journal->j_blk_offset;
 	irec.fmr_length = journal->j_maxlen;
-	irec.fmr_owner = EXT4_FMR_OWN_LOG;
+	irec.fmr_owner = PXT4_FMR_OWN_LOG;
 	irec.fmr_flags = 0;
 
 	return pxt4_getfsmap_helper(sb, info, &irec);
@@ -315,16 +315,16 @@ static unsigned int pxt4_getfsmap_find_sb(struct super_block *sb,
 					  pxt4_group_t agno,
 					  struct list_head *meta_list)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_fsblk_t fsb = pxt4_group_first_block_no(sb, agno);
 	pxt4_fsblk_t len;
 	unsigned long first_meta_bg = le32_to_cpu(sbi->s_es->s_first_meta_bg);
-	unsigned long metagroup = agno / EXT4_DESC_PER_BLOCK(sb);
+	unsigned long metagroup = agno / PXT4_DESC_PER_BLOCK(sb);
 	int error;
 
 	/* Record the superblock. */
 	if (pxt4_bg_has_super(sb, agno)) {
-		error = pxt4_getfsmap_fill(meta_list, fsb, 1, EXT4_FMR_OWN_FS);
+		error = pxt4_getfsmap_fill(meta_list, fsb, 1, PXT4_FMR_OWN_FS);
 		if (error)
 			return error;
 		fsb++;
@@ -335,7 +335,7 @@ static unsigned int pxt4_getfsmap_find_sb(struct super_block *sb,
 	if (!len)
 		return 0;
 	error = pxt4_getfsmap_fill(meta_list, fsb, len,
-				   EXT4_FMR_OWN_GDT);
+				   PXT4_FMR_OWN_GDT);
 	if (error)
 		return error;
 	fsb += len;
@@ -344,7 +344,7 @@ static unsigned int pxt4_getfsmap_find_sb(struct super_block *sb,
 	if (!pxt4_has_feature_meta_bg(sb) || metagroup < first_meta_bg) {
 		len = le16_to_cpu(sbi->s_es->s_reserved_gdt_blocks);
 		error = pxt4_getfsmap_fill(meta_list, fsb, len,
-					   EXT4_FMR_OWN_RESV_GDT);
+					   PXT4_FMR_OWN_RESV_GDT);
 		if (error)
 			return error;
 	}
@@ -415,7 +415,7 @@ static int pxt4_getfsmap_find_fixed_metadata(struct super_block *sb,
 	INIT_LIST_HEAD(meta_list);
 
 	/* Collect everything. */
-	for (agno = 0; agno < EXT4_SB(sb)->s_groups_count; agno++) {
+	for (agno = 0; agno < PXT4_SB(sb)->s_groups_count; agno++) {
 		gdp = pxt4_get_group_desc(sb, agno, NULL);
 		if (!gdp) {
 			error = -EFSCORRUPTED;
@@ -430,22 +430,22 @@ static int pxt4_getfsmap_find_fixed_metadata(struct super_block *sb,
 		/* Block bitmap */
 		error = pxt4_getfsmap_fill(meta_list,
 					   pxt4_block_bitmap(sb, gdp), 1,
-					   EXT4_FMR_OWN_BLKBM);
+					   PXT4_FMR_OWN_BLKBM);
 		if (error)
 			goto err;
 
 		/* Inode bitmap */
 		error = pxt4_getfsmap_fill(meta_list,
 					   pxt4_inode_bitmap(sb, gdp), 1,
-					   EXT4_FMR_OWN_INOBM);
+					   PXT4_FMR_OWN_INOBM);
 		if (error)
 			goto err;
 
 		/* Inodes */
 		error = pxt4_getfsmap_fill(meta_list,
 					   pxt4_inode_table(sb, gdp),
-					   EXT4_SB(sb)->s_itb_per_group,
-					   EXT4_FMR_OWN_INODES);
+					   PXT4_SB(sb)->s_itb_per_group,
+					   PXT4_FMR_OWN_INODES);
 		if (error)
 			goto err;
 	}
@@ -467,7 +467,7 @@ static int pxt4_getfsmap_datadev(struct super_block *sb,
 				 struct pxt4_fsmap *keys,
 				 struct pxt4_getfsmap_info *info)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_fsblk_t start_fsb;
 	pxt4_fsblk_t end_fsb;
 	pxt4_fsblk_t bofs;
@@ -499,7 +499,7 @@ static int pxt4_getfsmap_datadev(struct super_block *sb,
 	 * of the bg.
 	 */
 	info->gfi_low = keys[0];
-	info->gfi_low.fmr_physical = EXT4_C2B(sbi, first_cluster);
+	info->gfi_low.fmr_physical = PXT4_C2B(sbi, first_cluster);
 	info->gfi_low.fmr_length = 0;
 
 	memset(&info->gfi_high, 0xFF, sizeof(info->gfi_high));
@@ -519,7 +519,7 @@ static int pxt4_getfsmap_datadev(struct super_block *sb,
 		 */
 		if (info->gfi_agno == end_ag) {
 			info->gfi_high = keys[1];
-			info->gfi_high.fmr_physical = EXT4_C2B(sbi,
+			info->gfi_high.fmr_physical = PXT4_C2B(sbi,
 					last_cluster);
 			info->gfi_high.fmr_length = 0;
 		}
@@ -535,8 +535,8 @@ static int pxt4_getfsmap_datadev(struct super_block *sb,
 				info->gfi_high.fmr_owner);
 
 		error = pxt4_mballoc_query_range(sb, info->gfi_agno,
-				EXT4_B2C(sbi, info->gfi_low.fmr_physical),
-				EXT4_B2C(sbi, info->gfi_high.fmr_physical),
+				PXT4_B2C(sbi, info->gfi_low.fmr_physical),
+				PXT4_B2C(sbi, info->gfi_high.fmr_physical),
 				pxt4_getfsmap_datadev_helper, info);
 		if (error)
 			goto err;
@@ -574,8 +574,8 @@ static bool pxt4_getfsmap_is_valid_device(struct super_block *sb,
 	if (fm->fmr_device == 0 || fm->fmr_device == UINT_MAX ||
 	    fm->fmr_device == new_encode_dev(sb->s_bdev->bd_dev))
 		return true;
-	if (EXT4_SB(sb)->journal_bdev &&
-	    fm->fmr_device == new_encode_dev(EXT4_SB(sb)->journal_bdev->bd_dev))
+	if (PXT4_SB(sb)->journal_bdev &&
+	    fm->fmr_device == new_encode_dev(PXT4_SB(sb)->journal_bdev->bd_dev))
 		return true;
 	return false;
 }
@@ -602,7 +602,7 @@ static bool pxt4_getfsmap_check_keys(struct pxt4_fsmap *low_key,
 	return false;
 }
 
-#define EXT4_GETFSMAP_DEVS	2
+#define PXT4_GETFSMAP_DEVS	2
 /*
  * Get filesystem's extents as described in head, and format for
  * output.  Calls formatter to fill the user's buffer until all
@@ -628,7 +628,7 @@ int pxt4_getfsmap(struct super_block *sb, struct pxt4_fsmap_head *head,
 		  pxt4_fsmap_format_t formatter, void *arg)
 {
 	struct pxt4_fsmap dkeys[2];	/* per-dev keys */
-	struct pxt4_getfsmap_dev handlers[EXT4_GETFSMAP_DEVS];
+	struct pxt4_getfsmap_dev handlers[PXT4_GETFSMAP_DEVS];
 	struct pxt4_getfsmap_info info = { NULL };
 	int i;
 	int error = 0;
@@ -645,13 +645,13 @@ int pxt4_getfsmap(struct super_block *sb, struct pxt4_fsmap_head *head,
 	memset(handlers, 0, sizeof(handlers));
 	handlers[0].gfd_dev = new_encode_dev(sb->s_bdev->bd_dev);
 	handlers[0].gfd_fn = pxt4_getfsmap_datadev;
-	if (EXT4_SB(sb)->journal_bdev) {
+	if (PXT4_SB(sb)->journal_bdev) {
 		handlers[1].gfd_dev = new_encode_dev(
-				EXT4_SB(sb)->journal_bdev->bd_dev);
+				PXT4_SB(sb)->journal_bdev->bd_dev);
 		handlers[1].gfd_fn = pxt4_getfsmap_logdev;
 	}
 
-	sort(handlers, EXT4_GETFSMAP_DEVS, sizeof(struct pxt4_getfsmap_dev),
+	sort(handlers, PXT4_GETFSMAP_DEVS, sizeof(struct pxt4_getfsmap_dev),
 			pxt4_getfsmap_dev_compare, NULL);
 
 	/*
@@ -681,7 +681,7 @@ int pxt4_getfsmap(struct super_block *sb, struct pxt4_fsmap_head *head,
 	info.gfi_head = head;
 
 	/* For each device we support... */
-	for (i = 0; i < EXT4_GETFSMAP_DEVS; i++) {
+	for (i = 0; i < PXT4_GETFSMAP_DEVS; i++) {
 		/* Is this device within the range the user asked for? */
 		if (!handlers[i].gfd_fn)
 			continue;

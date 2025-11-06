@@ -4,8 +4,8 @@
  *
  * Author: Darrick J. Wong <darrick.wong@oracle.com>
  */
-#ifndef __EXT4_FSMAP_H__
-#define	__EXT4_FSMAP_H__
+#ifndef __PXT4_FSMAP_H__
+#define	__PXT4_FSMAP_H__
 
 struct fsmap;
 
@@ -39,18 +39,18 @@ typedef int (*pxt4_fsmap_format_t)(struct pxt4_fsmap *, void *);
 int pxt4_getfsmap(struct super_block *sb, struct pxt4_fsmap_head *head,
 		pxt4_fsmap_format_t formatter, void *arg);
 
-#define EXT4_QUERY_RANGE_ABORT		1
-#define EXT4_QUERY_RANGE_CONTINUE	0
+#define PXT4_QUERY_RANGE_ABORT		1
+#define PXT4_QUERY_RANGE_CONTINUE	0
 
 /*	fmr_owner special values for FS_IOC_GETFSMAP; some share w/ XFS */
-#define EXT4_FMR_OWN_FREE	FMR_OWN_FREE      /* free space */
-#define EXT4_FMR_OWN_UNKNOWN	FMR_OWN_UNKNOWN   /* unknown owner */
-#define EXT4_FMR_OWN_FS		FMR_OWNER('X', 1) /* static fs metadata */
-#define EXT4_FMR_OWN_LOG	FMR_OWNER('X', 2) /* journalling log */
-#define EXT4_FMR_OWN_INODES	FMR_OWNER('X', 5) /* inodes */
-#define EXT4_FMR_OWN_GDT	FMR_OWNER('f', 1) /* group descriptors */
-#define EXT4_FMR_OWN_RESV_GDT	FMR_OWNER('f', 2) /* reserved gdt blocks */
-#define EXT4_FMR_OWN_BLKBM	FMR_OWNER('f', 3) /* inode bitmap */
-#define EXT4_FMR_OWN_INOBM	FMR_OWNER('f', 4) /* block bitmap */
+#define PXT4_FMR_OWN_FREE	FMR_OWN_FREE      /* free space */
+#define PXT4_FMR_OWN_UNKNOWN	FMR_OWN_UNKNOWN   /* unknown owner */
+#define PXT4_FMR_OWN_FS		FMR_OWNER('X', 1) /* static fs metadata */
+#define PXT4_FMR_OWN_LOG	FMR_OWNER('X', 2) /* journalling log */
+#define PXT4_FMR_OWN_INODES	FMR_OWNER('X', 5) /* inodes */
+#define PXT4_FMR_OWN_GDT	FMR_OWNER('f', 1) /* group descriptors */
+#define PXT4_FMR_OWN_RESV_GDT	FMR_OWNER('f', 2) /* reserved gdt blocks */
+#define PXT4_FMR_OWN_BLKBM	FMR_OWNER('f', 3) /* inode bitmap */
+#define PXT4_FMR_OWN_INOBM	FMR_OWNER('f', 4) /* block bitmap */
 
-#endif /* __EXT4_FSMAP_H__ */
+#endif /* __PXT4_FSMAP_H__ */

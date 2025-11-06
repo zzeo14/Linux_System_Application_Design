@@ -47,13 +47,13 @@ static int pxt4_sync_parent(struct inode *inode)
 	struct dentry *dentry, *next;
 	int ret = 0;
 
-	if (!pxt4_test_inode_state(inode, EXT4_STATE_NEWENTRY))
+	if (!pxt4_test_inode_state(inode, PXT4_STATE_NEWENTRY))
 		return 0;
 	dentry = d_find_any_alias(inode);
 	if (!dentry)
 		return 0;
-	while (pxt4_test_inode_state(inode, EXT4_STATE_NEWENTRY)) {
-		pxt4_clear_inode_state(inode, EXT4_STATE_NEWENTRY);
+	while (pxt4_test_inode_state(inode, PXT4_STATE_NEWENTRY)) {
+		pxt4_clear_inode_state(inode, PXT4_STATE_NEWENTRY);
 
 		next = dget_parent(dentry);
 		dput(dentry);
@@ -93,13 +93,13 @@ static int pxt4_sync_parent(struct inode *inode)
 int pxt4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	struct inode *inode = file->f_mapping->host;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	journal_t *journal = EXT4_SB(inode->i_sb)->s_journal;
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	journal_t *journal = PXT4_SB(inode->i_sb)->s_journal;
 	int ret = 0, err;
 	tid_t commit_tid;
 	bool needs_barrier = false;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	J_ASSERT(pxt4_journal_current_handle() == NULL);
@@ -109,7 +109,7 @@ int pxt4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 	if (sb_rdonly(inode->i_sb)) {
 		/* Make sure that we read updated s_mount_flags value */
 		smp_rmb();
-		if (EXT4_SB(inode->i_sb)->s_mount_flags & EXT4_MF_FS_ABORTED)
+		if (PXT4_SB(inode->i_sb)->s_mount_flags & PXT4_MF_FS_ABORTED)
 			ret = -EROFS;
 		goto out;
 	}
@@ -146,7 +146,7 @@ int pxt4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 	}
 
 	commit_tid = datasync ? ei->i_datasync_tid : ei->i_sync_tid;
-	if (journal->j_flags & JBD2_BARRIER &&
+	if (journal->j_flags & JBD3_BARRIER &&
 	    !jbd3_trans_will_send_data_barrier(journal, commit_tid))
 		needs_barrier = true;
 	ret = jbd3_complete_transaction(journal, commit_tid);

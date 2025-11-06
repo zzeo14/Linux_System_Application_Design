@@ -180,15 +180,15 @@ static int pxt4_protect_reserved_inode(struct super_block *sb,
 				       u32 ino)
 {
 	struct inode *inode;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct pxt4_map_blocks map;
 	u32 i = 0, num;
 	int err = 0, n;
 
-	if ((ino < EXT4_ROOT_INO) ||
+	if ((ino < PXT4_ROOT_INO) ||
 	    (ino > le32_to_cpu(sbi->s_es->s_inodes_count)))
 		return -EINVAL;
-	inode = pxt4_iget(sb, ino, EXT4_IGET_SPECIAL);
+	inode = pxt4_iget(sb, ino, PXT4_IGET_SPECIAL);
 	if (IS_ERR(inode))
 		return PTR_ERR(inode);
 	num = (inode->i_size + sb->s_blocksize - 1) >> sb->s_blocksize_bits;
@@ -243,7 +243,7 @@ static void pxt4_destroy_system_zone(struct rcu_head *rcu)
 int pxt4_setup_system_zone(struct super_block *sb)
 {
 	pxt4_group_t ngroups = pxt4_get_groups_count(sb);
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct pxt4_system_blocks *system_blks;
 	struct pxt4_group_desc *gdp;
 	pxt4_group_t i;
@@ -313,9 +313,9 @@ void pxt4_release_system_zone(struct super_block *sb)
 {
 	struct pxt4_system_blocks *system_blks;
 
-	system_blks = rcu_dereference_protected(EXT4_SB(sb)->system_blks,
+	system_blks = rcu_dereference_protected(PXT4_SB(sb)->system_blks,
 					lockdep_is_held(&sb->s_umount));
-	rcu_assign_pointer(EXT4_SB(sb)->system_blks, NULL);
+	rcu_assign_pointer(PXT4_SB(sb)->system_blks, NULL);
 
 	if (system_blks)
 		call_rcu(&system_blks->rcu, pxt4_destroy_system_zone);
@@ -343,19 +343,19 @@ int pxt4_data_block_valid(struct pxt4_sb_info *sbi, pxt4_fsblk_t start_blk,
 int pxt4_check_blockref(const char *function, unsigned int line,
 			struct inode *inode, __le32 *p, unsigned int max)
 {
-	struct pxt4_super_block *es = EXT4_SB(inode->i_sb)->s_es;
+	struct pxt4_super_block *es = PXT4_SB(inode->i_sb)->s_es;
 	__le32 *bref = p;
 	unsigned int blk;
 
 	if (pxt4_has_feature_journal(inode->i_sb) &&
 	    (inode->i_ino ==
-	     le32_to_cpu(EXT4_SB(inode->i_sb)->s_es->s_journal_inum)))
+	     le32_to_cpu(PXT4_SB(inode->i_sb)->s_es->s_journal_inum)))
 		return 0;
 
 	while (bref < p+max) {
 		blk = le32_to_cpu(*bref++);
 		if (blk &&
-		    unlikely(!pxt4_data_block_valid(EXT4_SB(inode->i_sb),
+		    unlikely(!pxt4_data_block_valid(PXT4_SB(inode->i_sb),
 						    blk, 1))) {
 			es->s_last_error_block = cpu_to_le64(blk);
 			pxt4_error_inode(inode, function, line, blk,

@@ -20,6 +20,7 @@
  */
 
 #include <linux/time.h>
+#include <linux/ktime.h>
 #include <linux/fs.h>
 #include <linux/iomap.h>
 #include <linux/mount.h>
@@ -33,6 +34,7 @@
 #include "pxt4_jbd3.h"
 #include "xattr.h"
 #include "acl.h"
+#include "calclock.h"
 
 #ifdef CONFIG_FS_DAX
 static ssize_t pxt4_dax_read_iter(struct kiocb *iocb, struct iov_iter *to)
@@ -65,7 +67,7 @@ static ssize_t pxt4_dax_read_iter(struct kiocb *iocb, struct iov_iter *to)
 
 static ssize_t pxt4_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(file_inode(iocb->ki_filp)->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(file_inode(iocb->ki_filp)->i_sb))))
 		return -EIO;
 
 	if (!iov_iter_count(to))
@@ -85,18 +87,18 @@ static ssize_t pxt4_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
  */
 static int pxt4_release_file(struct inode *inode, struct file *filp)
 {
-	if (pxt4_test_inode_state(inode, EXT4_STATE_DA_ALLOC_CLOSE)) {
+	if (pxt4_test_inode_state(inode, PXT4_STATE_DA_ALLOC_CLOSE)) {
 		pxt4_alloc_da_blocks(inode);
-		pxt4_clear_inode_state(inode, EXT4_STATE_DA_ALLOC_CLOSE);
+		pxt4_clear_inode_state(inode, PXT4_STATE_DA_ALLOC_CLOSE);
 	}
 	/* if we are the last writer on the inode, drop the block reservation */
 	if ((filp->f_mode & FMODE_WRITE) &&
 			(atomic_read(&inode->i_writecount) == 1) &&
-		        !EXT4_I(inode)->i_reserved_data_blocks)
+		        !PXT4_I(inode)->i_reserved_data_blocks)
 	{
-		down_write(&EXT4_I(inode)->i_data_sem);
+		down_write(&PXT4_I(inode)->i_data_sem);
 		pxt4_discard_preallocations(inode);
-		up_write(&EXT4_I(inode)->i_data_sem);
+		up_write(&PXT4_I(inode)->i_data_sem);
 	}
 	if (is_dx(inode) && filp->private_data)
 		pxt4_htree_free_dir_info(filp->private_data);
@@ -108,7 +110,7 @@ static void pxt4_unwritten_wait(struct inode *inode)
 {
 	wait_queue_head_t *wq = pxt4_ioend_wq(inode);
 
-	wait_event(*wq, (atomic_read(&EXT4_I(inode)->i_unwritten) == 0));
+	wait_event(*wq, (atomic_read(&PXT4_I(inode)->i_unwritten) == 0));
 }
 
 /*
@@ -146,7 +148,7 @@ static bool pxt4_overwrite_io(struct inode *inode, loff_t pos, loff_t len)
 		return false;
 
 	map.m_lblk = pos >> blkbits;
-	map.m_len = EXT4_MAX_BLOCKS(len, pos, blkbits);
+	map.m_len = PXT4_MAX_BLOCKS(len, pos, blkbits);
 	blklen = map.m_len;
 
 	err = pxt4_map_blocks(NULL, inode, &map, 0);
@@ -155,7 +157,7 @@ static bool pxt4_overwrite_io(struct inode *inode, loff_t pos, loff_t len)
 	 * regardless of whether they have been initialized or not. To exclude
 	 * unwritten extents, we need to check m_flags.
 	 */
-	return err == blklen && (map.m_flags & EXT4_MAP_MAPPED);
+	return err == blklen && (map.m_flags & PXT4_MAP_MAPPED);
 }
 
 static ssize_t pxt4_write_checks(struct kiocb *iocb, struct iov_iter *from)
@@ -174,8 +176,8 @@ static ssize_t pxt4_write_checks(struct kiocb *iocb, struct iov_iter *from)
 	 * If we have encountered a bitmap-format file, the size limit
 	 * is smaller than s_maxbytes, which is for extent-mapped files.
 	 */
-	if (!(pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))) {
-		struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	if (!(pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))) {
+		struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 		if (iocb->ki_pos >= sbi->s_bitmap_maxbytes)
 			return -EFBIG;
@@ -217,7 +219,7 @@ out:
 #endif
 
 static ssize_t
-pxt4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
+pxt4_file_write_iter_internal(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct inode *inode = file_inode(iocb->ki_filp);
 	int o_direct = iocb->ki_flags & IOCB_DIRECT;
@@ -225,7 +227,7 @@ pxt4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	int overwrite = 0;
 	ssize_t ret;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 #ifdef CONFIG_FS_DAX
@@ -248,7 +250,7 @@ pxt4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	 * of partial blocks of two competing unaligned AIOs can result in data
 	 * corruption.
 	 */
-	if (o_direct && pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS) &&
+	if (o_direct && pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS) &&
 	    !is_sync_kiocb(iocb) &&
 	    pxt4_unaligned_aio(inode, from, iocb->ki_pos)) {
 		unaligned_aio = 1;
@@ -287,6 +289,21 @@ out:
 	return ret;
 }
 
+unsigned long long file_write_iter_time, file_write_iter_count;
+
+static ssize_t pxt4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
+{
+	ssize_t ret;
+	struct timespec myclock[2];
+
+	getrawmonotonic(&myclock[0]);
+	ret = pxt4_file_write_iter_internal(iocb, from);
+	getrawmonotonic(&myclock[1]);
+	calclock(myclock, &file_write_iter_time, &file_write_iter_count);
+
+	return ret;
+}
+
 #ifdef CONFIG_FS_DAX
 static vm_fault_t pxt4_dax_huge_fault(struct vm_fault *vmf,
 		enum page_entry_size pe_size)
@@ -316,17 +333,17 @@ static vm_fault_t pxt4_dax_huge_fault(struct vm_fault *vmf,
 	if (write) {
 		sb_start_pagefault(sb);
 		file_update_time(vmf->vma->vm_file);
-		down_read(&EXT4_I(inode)->i_mmap_sem);
+		down_read(&PXT4_I(inode)->i_mmap_sem);
 retry:
-		handle = pxt4_journal_start_sb(sb, EXT4_HT_WRITE_PAGE,
-					       EXT4_DATA_TRANS_BLOCKS(sb));
+		handle = pxt4_journal_start_sb(sb, PXT4_HT_WRITE_PAGE,
+					       PXT4_DATA_TRANS_BLOCKS(sb));
 		if (IS_ERR(handle)) {
-			up_read(&EXT4_I(inode)->i_mmap_sem);
+			up_read(&PXT4_I(inode)->i_mmap_sem);
 			sb_end_pagefault(sb);
 			return VM_FAULT_SIGBUS;
 		}
 	} else {
-		down_read(&EXT4_I(inode)->i_mmap_sem);
+		down_read(&PXT4_I(inode)->i_mmap_sem);
 	}
 	result = dax_iomap_fault(vmf, pe_size, &pfn, &error, &pxt4_iomap_ops);
 	if (write) {
@@ -338,10 +355,10 @@ retry:
 		/* Handling synchronous page fault? */
 		if (result & VM_FAULT_NEEDDSYNC)
 			result = dax_finish_sync_fault(vmf, pe_size, pfn);
-		up_read(&EXT4_I(inode)->i_mmap_sem);
+		up_read(&PXT4_I(inode)->i_mmap_sem);
 		sb_end_pagefault(sb);
 	} else {
-		up_read(&EXT4_I(inode)->i_mmap_sem);
+		up_read(&PXT4_I(inode)->i_mmap_sem);
 	}
 
 	return result;
@@ -371,7 +388,7 @@ static const struct vm_operations_struct pxt4_file_vm_ops = {
 static int pxt4_file_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct inode *inode = file->f_mapping->host;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct dax_device *dax_dev = sbi->s_daxdev;
 
 	if (unlikely(pxt4_forced_shutdown(sbi)))
@@ -397,19 +414,19 @@ static int pxt4_file_mmap(struct file *file, struct vm_area_struct *vma)
 static int pxt4_sample_last_mounted(struct super_block *sb,
 				    struct vfsmount *mnt)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct path path;
 	char buf[64], *cp;
 	handle_t *handle;
 	int err;
 
-	if (likely(sbi->s_mount_flags & EXT4_MF_MNTDIR_SAMPLED))
+	if (likely(sbi->s_mount_flags & PXT4_MF_MNTDIR_SAMPLED))
 		return 0;
 
 	if (sb_rdonly(sb) || !sb_start_intwrite_trylock(sb))
 		return 0;
 
-	sbi->s_mount_flags |= EXT4_MF_MNTDIR_SAMPLED;
+	sbi->s_mount_flags |= PXT4_MF_MNTDIR_SAMPLED;
 	/*
 	 * Sample where the filesystem has been mounted and
 	 * store it in the superblock for sysadmin convenience
@@ -424,7 +441,7 @@ static int pxt4_sample_last_mounted(struct super_block *sb,
 	if (IS_ERR(cp))
 		goto out;
 
-	handle = pxt4_journal_start_sb(sb, EXT4_HT_MISC, 1);
+	handle = pxt4_journal_start_sb(sb, PXT4_HT_MISC, 1);
 	err = PTR_ERR(handle);
 	if (IS_ERR(handle))
 		goto out;
@@ -446,7 +463,7 @@ static int pxt4_file_open(struct inode * inode, struct file * filp)
 {
 	int ret;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	ret = pxt4_sample_last_mounted(inode->i_sb, filp->f_path.mnt);
@@ -485,8 +502,8 @@ loff_t pxt4_llseek(struct file *file, loff_t offset, int whence)
 	struct inode *inode = file->f_mapping->host;
 	loff_t maxbytes;
 
-	if (!(pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)))
-		maxbytes = EXT4_SB(inode->i_sb)->s_bitmap_maxbytes;
+	if (!(pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)))
+		maxbytes = PXT4_SB(inode->i_sb)->s_bitmap_maxbytes;
 	else
 		maxbytes = inode->i_sb->s_maxbytes;
 

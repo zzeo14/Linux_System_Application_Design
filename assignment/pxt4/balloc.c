@@ -39,8 +39,8 @@ pxt4_group_t pxt4_get_group_number(struct super_block *sb,
 
 	if (test_opt2(sb, STD_GROUP_SIZE))
 		group = (block -
-			 le32_to_cpu(EXT4_SB(sb)->s_es->s_first_data_block)) >>
-			(EXT4_BLOCK_SIZE_BITS(sb) + EXT4_CLUSTER_BITS(sb) + 3);
+			 le32_to_cpu(PXT4_SB(sb)->s_es->s_first_data_block)) >>
+			(PXT4_BLOCK_SIZE_BITS(sb) + PXT4_CLUSTER_BITS(sb) + 3);
 	else
 		pxt4_get_group_no_and_offset(sb, block, &group, NULL);
 	return group;
@@ -53,12 +53,12 @@ pxt4_group_t pxt4_get_group_number(struct super_block *sb,
 void pxt4_get_group_no_and_offset(struct super_block *sb, pxt4_fsblk_t blocknr,
 		pxt4_group_t *blockgrpp, pxt4_grpblk_t *offsetp)
 {
-	struct pxt4_super_block *es = EXT4_SB(sb)->s_es;
+	struct pxt4_super_block *es = PXT4_SB(sb)->s_es;
 	pxt4_grpblk_t offset;
 
 	blocknr = blocknr - le32_to_cpu(es->s_first_data_block);
-	offset = do_div(blocknr, EXT4_BLOCKS_PER_GROUP(sb)) >>
-		EXT4_SB(sb)->s_cluster_bits;
+	offset = do_div(blocknr, PXT4_BLOCKS_PER_GROUP(sb)) >>
+		PXT4_SB(sb)->s_cluster_bits;
 	if (offsetp)
 		*offsetp = offset;
 	if (blockgrpp)
@@ -91,7 +91,7 @@ static unsigned pxt4_num_overhead_clusters(struct super_block *sb,
 	int block_cluster = -1, inode_cluster = -1, itbl_cluster = -1, i, c;
 	pxt4_fsblk_t start = pxt4_group_first_block_no(sb, block_group);
 	pxt4_fsblk_t itbl_blk;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	/* This is the number of clusters used by the superblock,
 	 * block group descriptors, and reserved block group
@@ -111,7 +111,7 @@ static unsigned pxt4_num_overhead_clusters(struct super_block *sb,
 	 * unusual file system layouts.
 	 */
 	if (pxt4_block_in_group(sb, pxt4_block_bitmap(sb, gdp), block_group)) {
-		block_cluster = EXT4_B2C(sbi,
+		block_cluster = PXT4_B2C(sbi,
 					 pxt4_block_bitmap(sb, gdp) - start);
 		if (block_cluster < num_clusters)
 			block_cluster = -1;
@@ -122,7 +122,7 @@ static unsigned pxt4_num_overhead_clusters(struct super_block *sb,
 	}
 
 	if (pxt4_block_in_group(sb, pxt4_inode_bitmap(sb, gdp), block_group)) {
-		inode_cluster = EXT4_B2C(sbi,
+		inode_cluster = PXT4_B2C(sbi,
 					 pxt4_inode_bitmap(sb, gdp) - start);
 		if (inode_cluster < num_clusters)
 			inode_cluster = -1;
@@ -135,7 +135,7 @@ static unsigned pxt4_num_overhead_clusters(struct super_block *sb,
 	itbl_blk = pxt4_inode_table(sb, gdp);
 	for (i = 0; i < sbi->s_itb_per_group; i++) {
 		if (pxt4_block_in_group(sb, itbl_blk + i, block_group)) {
-			c = EXT4_B2C(sbi, itbl_blk + i - start);
+			c = PXT4_B2C(sbi, itbl_blk + i - start);
 			if ((c < num_clusters) || (c == inode_cluster) ||
 			    (c == block_cluster) || (c == itbl_cluster))
 				continue;
@@ -168,11 +168,11 @@ static unsigned int num_clusters_in_group(struct super_block *sb,
 		 * we need to make sure we calculate the right free
 		 * blocks.
 		 */
-		blocks = pxt4_blocks_count(EXT4_SB(sb)->s_es) -
+		blocks = pxt4_blocks_count(PXT4_SB(sb)->s_es) -
 			pxt4_group_first_block_no(sb, block_group);
 	} else
-		blocks = EXT4_BLOCKS_PER_GROUP(sb);
-	return EXT4_NUM_B2C(EXT4_SB(sb), blocks);
+		blocks = PXT4_BLOCKS_PER_GROUP(sb);
+	return PXT4_NUM_B2C(PXT4_SB(sb), blocks);
 }
 
 /* Initializes an uninitialized block bitmap */
@@ -182,7 +182,7 @@ static int pxt4_init_block_bitmap(struct super_block *sb,
 				   struct pxt4_group_desc *gdp)
 {
 	unsigned int bit, bit_max;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_fsblk_t start, tmp;
 
 	J_ASSERT_BH(bh, buffer_locked(bh));
@@ -191,8 +191,8 @@ static int pxt4_init_block_bitmap(struct super_block *sb,
 	 * essentially implementing a per-group read-only flag. */
 	if (!pxt4_group_desc_csum_verify(sb, block_group, gdp)) {
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_BBITMAP_CORRUPT |
-					EXT4_GROUP_INFO_IBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_BBITMAP_CORRUPT |
+					PXT4_GROUP_INFO_IBITMAP_CORRUPT);
 		return -EFSBADCRC;
 	}
 	memset(bh->b_data, 0, sb->s_blocksize);
@@ -209,17 +209,17 @@ static int pxt4_init_block_bitmap(struct super_block *sb,
 	/* Set bits for block and inode bitmaps, and inode table */
 	tmp = pxt4_block_bitmap(sb, gdp);
 	if (pxt4_block_in_group(sb, tmp, block_group))
-		pxt4_set_bit(EXT4_B2C(sbi, tmp - start), bh->b_data);
+		pxt4_set_bit(PXT4_B2C(sbi, tmp - start), bh->b_data);
 
 	tmp = pxt4_inode_bitmap(sb, gdp);
 	if (pxt4_block_in_group(sb, tmp, block_group))
-		pxt4_set_bit(EXT4_B2C(sbi, tmp - start), bh->b_data);
+		pxt4_set_bit(PXT4_B2C(sbi, tmp - start), bh->b_data);
 
 	tmp = pxt4_inode_table(sb, gdp);
 	for (; tmp < pxt4_inode_table(sb, gdp) +
 		     sbi->s_itb_per_group; tmp++) {
 		if (pxt4_block_in_group(sb, tmp, block_group))
-			pxt4_set_bit(EXT4_B2C(sbi, tmp - start), bh->b_data);
+			pxt4_set_bit(PXT4_B2C(sbi, tmp - start), bh->b_data);
 	}
 
 	/*
@@ -269,7 +269,7 @@ struct pxt4_group_desc * pxt4_get_group_desc(struct super_block *sb,
 	unsigned int offset;
 	pxt4_group_t ngroups = pxt4_get_groups_count(sb);
 	struct pxt4_group_desc *desc;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct buffer_head *bh_p;
 
 	if (block_group >= ngroups) {
@@ -279,8 +279,8 @@ struct pxt4_group_desc * pxt4_get_group_desc(struct super_block *sb,
 		return NULL;
 	}
 
-	group_desc = block_group >> EXT4_DESC_PER_BLOCK_BITS(sb);
-	offset = block_group & (EXT4_DESC_PER_BLOCK(sb) - 1);
+	group_desc = block_group >> PXT4_DESC_PER_BLOCK_BITS(sb);
+	offset = block_group & (PXT4_DESC_PER_BLOCK(sb) - 1);
 	bh_p = sbi_array_rcu_deref(sbi, s_group_desc, group_desc);
 	/*
 	 * sbi_array_rcu_deref returns with rcu unlocked, this is ok since
@@ -297,7 +297,7 @@ struct pxt4_group_desc * pxt4_get_group_desc(struct super_block *sb,
 
 	desc = (struct pxt4_group_desc *)(
 		(__u8 *)bh_p->b_data +
-		offset * EXT4_DESC_SIZE(sb));
+		offset * PXT4_DESC_SIZE(sb));
 	if (bh)
 		*bh = bh_p;
 	return desc;
@@ -312,10 +312,10 @@ static pxt4_fsblk_t pxt4_valid_block_bitmap(struct super_block *sb,
 					    pxt4_group_t block_group,
 					    struct buffer_head *bh)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	pxt4_grpblk_t offset;
 	pxt4_grpblk_t next_zero_bit;
-	pxt4_grpblk_t max_bit = EXT4_CLUSTERS_PER_GROUP(sb);
+	pxt4_grpblk_t max_bit = PXT4_CLUSTERS_PER_GROUP(sb);
 	pxt4_fsblk_t blk;
 	pxt4_fsblk_t group_first_block;
 
@@ -333,30 +333,30 @@ static pxt4_fsblk_t pxt4_valid_block_bitmap(struct super_block *sb,
 	/* check whether block bitmap block number is set */
 	blk = pxt4_block_bitmap(sb, desc);
 	offset = blk - group_first_block;
-	if (offset < 0 || EXT4_B2C(sbi, offset) >= max_bit ||
-	    !pxt4_test_bit(EXT4_B2C(sbi, offset), bh->b_data))
+	if (offset < 0 || PXT4_B2C(sbi, offset) >= max_bit ||
+	    !pxt4_test_bit(PXT4_B2C(sbi, offset), bh->b_data))
 		/* bad block bitmap */
 		return blk;
 
 	/* check whether the inode bitmap block number is set */
 	blk = pxt4_inode_bitmap(sb, desc);
 	offset = blk - group_first_block;
-	if (offset < 0 || EXT4_B2C(sbi, offset) >= max_bit ||
-	    !pxt4_test_bit(EXT4_B2C(sbi, offset), bh->b_data))
+	if (offset < 0 || PXT4_B2C(sbi, offset) >= max_bit ||
+	    !pxt4_test_bit(PXT4_B2C(sbi, offset), bh->b_data))
 		/* bad block bitmap */
 		return blk;
 
 	/* check whether the inode table block number is set */
 	blk = pxt4_inode_table(sb, desc);
 	offset = blk - group_first_block;
-	if (offset < 0 || EXT4_B2C(sbi, offset) >= max_bit ||
-	    EXT4_B2C(sbi, offset + sbi->s_itb_per_group) >= max_bit)
+	if (offset < 0 || PXT4_B2C(sbi, offset) >= max_bit ||
+	    PXT4_B2C(sbi, offset + sbi->s_itb_per_group) >= max_bit)
 		return blk;
 	next_zero_bit = pxt4_find_next_zero_bit(bh->b_data,
-			EXT4_B2C(sbi, offset + sbi->s_itb_per_group),
-			EXT4_B2C(sbi, offset));
+			PXT4_B2C(sbi, offset + sbi->s_itb_per_group),
+			PXT4_B2C(sbi, offset));
 	if (next_zero_bit <
-	    EXT4_B2C(sbi, offset + sbi->s_itb_per_group))
+	    PXT4_B2C(sbi, offset + sbi->s_itb_per_group))
 		/* bad bitmap for inode tables */
 		return blk;
 	return 0;
@@ -372,7 +372,7 @@ static int pxt4_validate_block_bitmap(struct super_block *sb,
 
 	if (buffer_verified(bh))
 		return 0;
-	if (EXT4_MB_GRP_BBITMAP_CORRUPT(grp))
+	if (PXT4_MB_GRP_BBITMAP_CORRUPT(grp))
 		return -EFSCORRUPTED;
 
 	pxt4_lock_group(sb, block_group);
@@ -383,7 +383,7 @@ static int pxt4_validate_block_bitmap(struct super_block *sb,
 		pxt4_unlock_group(sb, block_group);
 		pxt4_error(sb, "bg %u: bad block bitmap checksum", block_group);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_BBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_BBITMAP_CORRUPT);
 		return -EFSBADCRC;
 	}
 	blk = pxt4_valid_block_bitmap(sb, desc, block_group, bh);
@@ -392,7 +392,7 @@ static int pxt4_validate_block_bitmap(struct super_block *sb,
 		pxt4_error(sb, "bg %u: block %llu: invalid block bitmap",
 			   block_group, blk);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_BBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_BBITMAP_CORRUPT);
 		return -EFSCORRUPTED;
 	}
 	set_buffer_verified(bh);
@@ -415,7 +415,7 @@ struct buffer_head *
 pxt4_read_block_bitmap_nowait(struct super_block *sb, pxt4_group_t block_group)
 {
 	struct pxt4_group_desc *desc;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	struct buffer_head *bh;
 	pxt4_fsblk_t bitmap_blk;
 	int err;
@@ -429,7 +429,7 @@ pxt4_read_block_bitmap_nowait(struct super_block *sb, pxt4_group_t block_group)
 		pxt4_error(sb, "Invalid block bitmap block %llu in "
 			   "block_group %u", bitmap_blk, block_group);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_BBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_BBITMAP_CORRUPT);
 		return ERR_PTR(-EFSCORRUPTED);
 	}
 	bh = sb_getblk(sb, bitmap_blk);
@@ -450,7 +450,7 @@ pxt4_read_block_bitmap_nowait(struct super_block *sb, pxt4_group_t block_group)
 	}
 	pxt4_lock_group(sb, block_group);
 	if (pxt4_has_group_desc_csum(sb) &&
-	    (desc->bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT))) {
+	    (desc->bg_flags & cpu_to_le16(PXT4_BG_BLOCK_UNINIT))) {
 		if (block_group == 0) {
 			pxt4_unlock_group(sb, block_group);
 			unlock_buffer(bh);
@@ -518,7 +518,7 @@ int pxt4_wait_block_bitmap(struct super_block *sb, pxt4_group_t block_group,
 			   "block_group = %u, block_bitmap = %llu",
 			   block_group, (unsigned long long) bh->b_blocknr);
 		pxt4_mark_group_bitmap_corrupted(sb, block_group,
-					EXT4_GROUP_INFO_BBITMAP_CORRUPT);
+					PXT4_GROUP_INFO_BBITMAP_CORRUPT);
 		return -EIO;
 	}
 	clear_buffer_new(bh);
@@ -571,7 +571,7 @@ static int pxt4_has_free_clusters(struct pxt4_sb_info *sbi,
 	      resv_clusters;
 
 	if (free_clusters - (nclusters + rsv + dirty_clusters) <
-					EXT4_FREECLUSTERS_WATERMARK) {
+					PXT4_FREECLUSTERS_WATERMARK) {
 		free_clusters  = percpu_counter_sum_positive(fcc);
 		dirty_clusters = percpu_counter_sum_positive(dcc);
 	}
@@ -585,14 +585,14 @@ static int pxt4_has_free_clusters(struct pxt4_sb_info *sbi,
 	if (uid_eq(sbi->s_resuid, current_fsuid()) ||
 	    (!gid_eq(sbi->s_resgid, GLOBAL_ROOT_GID) && in_group_p(sbi->s_resgid)) ||
 	    capable(CAP_SYS_RESOURCE) ||
-	    (flags & EXT4_MB_USE_ROOT_BLOCKS)) {
+	    (flags & PXT4_MB_USE_ROOT_BLOCKS)) {
 
 		if (free_clusters >= (nclusters + dirty_clusters +
 				      resv_clusters))
 			return 1;
 	}
 	/* No free blocks. Let's see if we can dip into reserved pool */
-	if (flags & EXT4_MB_USE_RESERVED) {
+	if (flags & PXT4_MB_USE_RESERVED) {
 		if (free_clusters >= (nclusters + dirty_clusters))
 			return 1;
 	}
@@ -623,7 +623,7 @@ int pxt4_claim_free_clusters(struct pxt4_sb_info *sbi,
  */
 int pxt4_should_retry_alloc(struct super_block *sb, int *retries)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	if (!sbi->s_journal)
 		return 0;
@@ -683,9 +683,9 @@ pxt4_fsblk_t pxt4_new_meta_blocks(handle_t *handle, struct inode *inode,
 	 * Account for the allocated meta blocks.  We will never
 	 * fail EDQUOT for metdata, but we do account for it.
 	 */
-	if (!(*errp) && (flags & EXT4_MB_DELALLOC_RESERVED)) {
+	if (!(*errp) && (flags & PXT4_MB_DELALLOC_RESERVED)) {
 		dquot_alloc_block_nofail(inode,
-				EXT4_C2B(EXT4_SB(inode->i_sb), ar.len));
+				PXT4_C2B(PXT4_SB(inode->i_sb), ar.len));
 	}
 	return ret;
 }
@@ -703,13 +703,13 @@ pxt4_fsblk_t pxt4_count_free_clusters(struct super_block *sb)
 	pxt4_group_t i;
 	pxt4_group_t ngroups = pxt4_get_groups_count(sb);
 	struct pxt4_group_info *grp;
-#ifdef EXT4FS_DEBUG
+#ifdef PXT4FS_DEBUG
 	struct pxt4_super_block *es;
 	pxt4_fsblk_t bitmap_count;
 	unsigned int x;
 	struct buffer_head *bitmap_bh = NULL;
 
-	es = EXT4_SB(sb)->s_es;
+	es = PXT4_SB(sb)->s_es;
 	desc_count = 0;
 	bitmap_count = 0;
 	gdp = NULL;
@@ -719,9 +719,9 @@ pxt4_fsblk_t pxt4_count_free_clusters(struct super_block *sb)
 		if (!gdp)
 			continue;
 		grp = NULL;
-		if (EXT4_SB(sb)->s_group_info)
+		if (PXT4_SB(sb)->s_group_info)
 			grp = pxt4_get_group_info(sb, i);
-		if (!grp || !EXT4_MB_GRP_BBITMAP_CORRUPT(grp))
+		if (!grp || !PXT4_MB_GRP_BBITMAP_CORRUPT(grp))
 			desc_count += pxt4_free_group_clusters(sb, gdp);
 		brelse(bitmap_bh);
 		bitmap_bh = pxt4_read_block_bitmap(sb, i);
@@ -731,7 +731,7 @@ pxt4_fsblk_t pxt4_count_free_clusters(struct super_block *sb)
 		}
 
 		x = pxt4_count_free(bitmap_bh->b_data,
-				    EXT4_CLUSTERS_PER_GROUP(sb) / 8);
+				    PXT4_CLUSTERS_PER_GROUP(sb) / 8);
 		printk(KERN_DEBUG "group %u: stored = %d, counted = %u\n",
 			i, pxt4_free_group_clusters(sb, gdp), x);
 		bitmap_count += x;
@@ -739,7 +739,7 @@ pxt4_fsblk_t pxt4_count_free_clusters(struct super_block *sb)
 	brelse(bitmap_bh);
 	printk(KERN_DEBUG "pxt4_count_free_clusters: stored = %llu"
 	       ", computed = %llu, %llu\n",
-	       EXT4_NUM_B2C(EXT4_SB(sb), pxt4_free_blocks_count(es)),
+	       PXT4_NUM_B2C(PXT4_SB(sb), pxt4_free_blocks_count(es)),
 	       desc_count, bitmap_count);
 	return bitmap_count;
 #else
@@ -749,9 +749,9 @@ pxt4_fsblk_t pxt4_count_free_clusters(struct super_block *sb)
 		if (!gdp)
 			continue;
 		grp = NULL;
-		if (EXT4_SB(sb)->s_group_info)
+		if (PXT4_SB(sb)->s_group_info)
 			grp = pxt4_get_group_info(sb, i);
-		if (!grp || !EXT4_MB_GRP_BBITMAP_CORRUPT(grp))
+		if (!grp || !PXT4_MB_GRP_BBITMAP_CORRUPT(grp))
 			desc_count += pxt4_free_group_clusters(sb, gdp);
 	}
 
@@ -782,7 +782,7 @@ static inline int test_root(pxt4_group_t a, int b)
  */
 int pxt4_bg_has_super(struct super_block *sb, pxt4_group_t group)
 {
-	struct pxt4_super_block *es = EXT4_SB(sb)->s_es;
+	struct pxt4_super_block *es = PXT4_SB(sb)->s_es;
 
 	if (group == 0)
 		return 1;
@@ -806,9 +806,9 @@ int pxt4_bg_has_super(struct super_block *sb, pxt4_group_t group)
 static unsigned long pxt4_bg_num_gdb_meta(struct super_block *sb,
 					pxt4_group_t group)
 {
-	unsigned long metagroup = group / EXT4_DESC_PER_BLOCK(sb);
-	pxt4_group_t first = metagroup * EXT4_DESC_PER_BLOCK(sb);
-	pxt4_group_t last = first + EXT4_DESC_PER_BLOCK(sb) - 1;
+	unsigned long metagroup = group / PXT4_DESC_PER_BLOCK(sb);
+	pxt4_group_t first = metagroup * PXT4_DESC_PER_BLOCK(sb);
+	pxt4_group_t last = first + PXT4_DESC_PER_BLOCK(sb) - 1;
 
 	if (group == first || group == first + 1 || group == last)
 		return 1;
@@ -822,9 +822,9 @@ static unsigned long pxt4_bg_num_gdb_nometa(struct super_block *sb,
 		return 0;
 
 	if (pxt4_has_feature_meta_bg(sb))
-		return le32_to_cpu(EXT4_SB(sb)->s_es->s_first_meta_bg);
+		return le32_to_cpu(PXT4_SB(sb)->s_es->s_first_meta_bg);
 	else
-		return EXT4_SB(sb)->s_gdb_count;
+		return PXT4_SB(sb)->s_gdb_count;
 }
 
 /**
@@ -839,8 +839,8 @@ static unsigned long pxt4_bg_num_gdb_nometa(struct super_block *sb,
 unsigned long pxt4_bg_num_gdb(struct super_block *sb, pxt4_group_t group)
 {
 	unsigned long first_meta_bg =
-			le32_to_cpu(EXT4_SB(sb)->s_es->s_first_meta_bg);
-	unsigned long metagroup = group / EXT4_DESC_PER_BLOCK(sb);
+			le32_to_cpu(PXT4_SB(sb)->s_es->s_first_meta_bg);
+	unsigned long metagroup = group / PXT4_DESC_PER_BLOCK(sb);
 
 	if (!pxt4_has_feature_meta_bg(sb) || metagroup < first_meta_bg)
 		return pxt4_bg_num_gdb_nometa(sb, group);
@@ -856,7 +856,7 @@ unsigned long pxt4_bg_num_gdb(struct super_block *sb, pxt4_group_t group)
 static unsigned pxt4_num_base_meta_clusters(struct super_block *sb,
 				     pxt4_group_t block_group)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	unsigned num;
 
 	/* Check for superblock and gdt backups in this group */
@@ -872,7 +872,7 @@ static unsigned pxt4_num_base_meta_clusters(struct super_block *sb,
 	} else { /* For META_BG_BLOCK_GROUPS */
 		num += pxt4_bg_num_gdb(sb, block_group);
 	}
-	return EXT4_NUM_B2C(sbi, num);
+	return PXT4_NUM_B2C(sbi, num);
 }
 /**
  *	pxt4_inode_to_goal_block - return a hint for block allocation
@@ -883,17 +883,17 @@ static unsigned pxt4_num_base_meta_clusters(struct super_block *sb,
  */
 pxt4_fsblk_t pxt4_inode_to_goal_block(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	pxt4_group_t block_group;
 	pxt4_grpblk_t colour;
-	int flex_size = pxt4_flex_bg_size(EXT4_SB(inode->i_sb));
+	int flex_size = pxt4_flex_bg_size(PXT4_SB(inode->i_sb));
 	pxt4_fsblk_t bg_start;
 	pxt4_fsblk_t last_block;
 
 	block_group = ei->i_block_group;
-	if (flex_size >= EXT4_FLEX_SIZE_DIR_ALLOC_SCHEME) {
+	if (flex_size >= PXT4_FLEX_SIZE_DIR_ALLOC_SCHEME) {
 		/*
-		 * If there are at least EXT4_FLEX_SIZE_DIR_ALLOC_SCHEME
+		 * If there are at least PXT4_FLEX_SIZE_DIR_ALLOC_SCHEME
 		 * block groups per flexgroup, reserve the first block
 		 * group for directories and special files.  Regular
 		 * files will start at the second block group.  This
@@ -905,7 +905,7 @@ pxt4_fsblk_t pxt4_inode_to_goal_block(struct inode *inode)
 			block_group++;
 	}
 	bg_start = pxt4_group_first_block_no(inode->i_sb, block_group);
-	last_block = pxt4_blocks_count(EXT4_SB(inode->i_sb)->s_es) - 1;
+	last_block = pxt4_blocks_count(PXT4_SB(inode->i_sb)->s_es) - 1;
 
 	/*
 	 * If we are doing delayed allocation, we don't need take
@@ -914,9 +914,9 @@ pxt4_fsblk_t pxt4_inode_to_goal_block(struct inode *inode)
 	if (test_opt(inode->i_sb, DELALLOC))
 		return bg_start;
 
-	if (bg_start + EXT4_BLOCKS_PER_GROUP(inode->i_sb) <= last_block)
+	if (bg_start + PXT4_BLOCKS_PER_GROUP(inode->i_sb) <= last_block)
 		colour = (current->pid % 16) *
-			(EXT4_BLOCKS_PER_GROUP(inode->i_sb) / 16);
+			(PXT4_BLOCKS_PER_GROUP(inode->i_sb) / 16);
 	else
 		colour = (current->pid % 16) * ((last_block - bg_start) / 16);
 	return bg_start + colour;

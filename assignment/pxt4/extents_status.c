@@ -181,7 +181,7 @@ static void pxt4_es_print_tree(struct inode *inode)
 	struct rb_node *node;
 
 	printk(KERN_DEBUG "status extents for inode %lu:", inode->i_ino);
-	tree = &EXT4_I(inode)->i_es_tree;
+	tree = &PXT4_I(inode)->i_es_tree;
 	node = rb_first(&tree->root);
 	while (node) {
 		struct extent_status *es;
@@ -265,7 +265,7 @@ static void __es_find_extent_range(struct inode *inode,
 	WARN_ON(es == NULL);
 	WARN_ON(end < lblk);
 
-	tree = &EXT4_I(inode)->i_es_tree;
+	tree = &PXT4_I(inode)->i_es_tree;
 
 	/* see if the extent has been cached */
 	es->es_lblk = es->es_len = es->es_pblk = 0;
@@ -313,9 +313,9 @@ void pxt4_es_find_extent_range(struct inode *inode,
 {
 	trace_pxt4_es_find_extent_range_enter(inode, lblk);
 
-	read_lock(&EXT4_I(inode)->i_es_lock);
+	read_lock(&PXT4_I(inode)->i_es_lock);
 	__es_find_extent_range(inode, matching_fn, lblk, end, es);
-	read_unlock(&EXT4_I(inode)->i_es_lock);
+	read_unlock(&PXT4_I(inode)->i_es_lock);
 
 	trace_pxt4_es_find_extent_range_exit(inode, es);
 }
@@ -361,9 +361,9 @@ bool pxt4_es_scan_range(struct inode *inode,
 {
 	bool ret;
 
-	read_lock(&EXT4_I(inode)->i_es_lock);
+	read_lock(&PXT4_I(inode)->i_es_lock);
 	ret = __es_scan_range(inode, matching_fn, lblk, end);
-	read_unlock(&EXT4_I(inode)->i_es_lock);
+	read_unlock(&PXT4_I(inode)->i_es_lock);
 
 	return ret;
 }
@@ -386,10 +386,10 @@ static bool __es_scan_clu(struct inode *inode,
 			  int (*matching_fn)(struct extent_status *es),
 			  pxt4_lblk_t lblk)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	pxt4_lblk_t lblk_start, lblk_end;
 
-	lblk_start = EXT4_LBLK_CMASK(sbi, lblk);
+	lblk_start = PXT4_LBLK_CMASK(sbi, lblk);
 	lblk_end = lblk_start + sbi->s_cluster_ratio - 1;
 
 	return __es_scan_range(inode, matching_fn, lblk_start, lblk_end);
@@ -404,17 +404,17 @@ bool pxt4_es_scan_clu(struct inode *inode,
 {
 	bool ret;
 
-	read_lock(&EXT4_I(inode)->i_es_lock);
+	read_lock(&PXT4_I(inode)->i_es_lock);
 	ret = __es_scan_clu(inode, matching_fn, lblk);
-	read_unlock(&EXT4_I(inode)->i_es_lock);
+	read_unlock(&PXT4_I(inode)->i_es_lock);
 
 	return ret;
 }
 
 static void pxt4_es_list_add(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 	if (!list_empty(&ei->i_es_list))
 		return;
@@ -429,8 +429,8 @@ static void pxt4_es_list_add(struct inode *inode)
 
 static void pxt4_es_list_del(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 	spin_lock(&sbi->s_es_lock);
 	if (!list_empty(&ei->i_es_list)) {
@@ -457,29 +457,29 @@ pxt4_es_alloc_extent(struct inode *inode, pxt4_lblk_t lblk, pxt4_lblk_t len,
 	 * We don't count delayed extent because we never try to reclaim them
 	 */
 	if (!pxt4_es_is_delayed(es)) {
-		if (!EXT4_I(inode)->i_es_shk_nr++)
+		if (!PXT4_I(inode)->i_es_shk_nr++)
 			pxt4_es_list_add(inode);
-		percpu_counter_inc(&EXT4_SB(inode->i_sb)->
+		percpu_counter_inc(&PXT4_SB(inode->i_sb)->
 					s_es_stats.es_stats_shk_cnt);
 	}
 
-	EXT4_I(inode)->i_es_all_nr++;
-	percpu_counter_inc(&EXT4_SB(inode->i_sb)->s_es_stats.es_stats_all_cnt);
+	PXT4_I(inode)->i_es_all_nr++;
+	percpu_counter_inc(&PXT4_SB(inode->i_sb)->s_es_stats.es_stats_all_cnt);
 
 	return es;
 }
 
 static void pxt4_es_free_extent(struct inode *inode, struct extent_status *es)
 {
-	EXT4_I(inode)->i_es_all_nr--;
-	percpu_counter_dec(&EXT4_SB(inode->i_sb)->s_es_stats.es_stats_all_cnt);
+	PXT4_I(inode)->i_es_all_nr--;
+	percpu_counter_dec(&PXT4_SB(inode->i_sb)->s_es_stats.es_stats_all_cnt);
 
 	/* Decrease the shrink counter when this es is not delayed */
 	if (!pxt4_es_is_delayed(es)) {
-		BUG_ON(EXT4_I(inode)->i_es_shk_nr == 0);
-		if (!--EXT4_I(inode)->i_es_shk_nr)
+		BUG_ON(PXT4_I(inode)->i_es_shk_nr == 0);
+		if (!--PXT4_I(inode)->i_es_shk_nr)
 			pxt4_es_list_del(inode);
-		percpu_counter_dec(&EXT4_SB(inode->i_sb)->
+		percpu_counter_dec(&PXT4_SB(inode->i_sb)->
 					s_es_stats.es_stats_shk_cnt);
 	}
 
@@ -528,7 +528,7 @@ static int pxt4_es_can_be_merged(struct extent_status *es1,
 static struct extent_status *
 pxt4_es_try_to_merge_left(struct inode *inode, struct extent_status *es)
 {
-	struct pxt4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct pxt4_es_tree *tree = &PXT4_I(inode)->i_es_tree;
 	struct extent_status *es1;
 	struct rb_node *node;
 
@@ -552,7 +552,7 @@ pxt4_es_try_to_merge_left(struct inode *inode, struct extent_status *es)
 static struct extent_status *
 pxt4_es_try_to_merge_right(struct inode *inode, struct extent_status *es)
 {
-	struct pxt4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct pxt4_es_tree *tree = &PXT4_I(inode)->i_es_tree;
 	struct extent_status *es1;
 	struct rb_node *node;
 
@@ -585,7 +585,7 @@ static void pxt4_es_insert_extent_ext_check(struct inode *inode,
 	unsigned short ee_len;
 	int depth, ee_status, es_status;
 
-	path = pxt4_find_extent(inode, es->es_lblk, NULL, EXT4_EX_NOCACHE);
+	path = pxt4_find_extent(inode, es->es_lblk, NULL, PXT4_EX_NOCACHE);
 	if (IS_ERR(path))
 		return;
 
@@ -732,8 +732,8 @@ static inline void pxt4_es_insert_extent_check(struct inode *inode,
 	 * We don't need to worry about the race condition because
 	 * caller takes i_data_sem locking.
 	 */
-	BUG_ON(!rwsem_is_locked(&EXT4_I(inode)->i_data_sem));
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	BUG_ON(!rwsem_is_locked(&PXT4_I(inode)->i_data_sem));
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 		pxt4_es_insert_extent_ext_check(inode, es);
 	else
 		pxt4_es_insert_extent_ind_check(inode, es);
@@ -747,7 +747,7 @@ static inline void pxt4_es_insert_extent_check(struct inode *inode,
 
 static int __es_insert_extent(struct inode *inode, struct extent_status *newes)
 {
-	struct pxt4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct pxt4_es_tree *tree = &PXT4_I(inode)->i_es_tree;
 	struct rb_node **p = &tree->root.rb_node;
 	struct rb_node *parent = NULL;
 	struct extent_status *es;
@@ -810,7 +810,7 @@ int pxt4_es_insert_extent(struct inode *inode, pxt4_lblk_t lblk,
 	struct extent_status newes;
 	pxt4_lblk_t end = lblk + len - 1;
 	int err = 0;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 	es_debug("add [%u/%u) %llu %x to extent status tree of inode %lu\n",
 		 lblk, len, pblk, status, inode->i_ino);
@@ -835,14 +835,14 @@ int pxt4_es_insert_extent(struct inode *inode, pxt4_lblk_t lblk,
 
 	pxt4_es_insert_extent_check(inode, &newes);
 
-	write_lock(&EXT4_I(inode)->i_es_lock);
+	write_lock(&PXT4_I(inode)->i_es_lock);
 	err = __es_remove_extent(inode, lblk, end, NULL);
 	if (err != 0)
 		goto error;
 retry:
 	err = __es_insert_extent(inode, &newes);
-	if (err == -ENOMEM && __es_shrink(EXT4_SB(inode->i_sb),
-					  128, EXT4_I(inode)))
+	if (err == -ENOMEM && __es_shrink(PXT4_SB(inode->i_sb),
+					  128, PXT4_I(inode)))
 		goto retry;
 	if (err == -ENOMEM && !pxt4_es_is_delayed(&newes))
 		err = 0;
@@ -853,7 +853,7 @@ retry:
 		__revise_pending(inode, lblk, len);
 
 error:
-	write_unlock(&EXT4_I(inode)->i_es_lock);
+	write_unlock(&PXT4_I(inode)->i_es_lock);
 
 	pxt4_es_print_tree(inode);
 
@@ -883,12 +883,12 @@ void pxt4_es_cache_extent(struct inode *inode, pxt4_lblk_t lblk,
 
 	BUG_ON(end < lblk);
 
-	write_lock(&EXT4_I(inode)->i_es_lock);
+	write_lock(&PXT4_I(inode)->i_es_lock);
 
-	es = __es_tree_search(&EXT4_I(inode)->i_es_tree.root, lblk);
+	es = __es_tree_search(&PXT4_I(inode)->i_es_tree.root, lblk);
 	if (!es || es->es_lblk > end)
 		__es_insert_extent(inode, &newes);
-	write_unlock(&EXT4_I(inode)->i_es_lock);
+	write_unlock(&PXT4_I(inode)->i_es_lock);
 }
 
 /*
@@ -911,8 +911,8 @@ int pxt4_es_lookup_extent(struct inode *inode, pxt4_lblk_t lblk,
 	trace_pxt4_es_lookup_extent_enter(inode, lblk);
 	es_debug("lookup extent in block %u\n", lblk);
 
-	tree = &EXT4_I(inode)->i_es_tree;
-	read_lock(&EXT4_I(inode)->i_es_lock);
+	tree = &PXT4_I(inode)->i_es_tree;
+	read_lock(&PXT4_I(inode)->i_es_lock);
 
 	/* find extent in cache firstly */
 	es->es_lblk = es->es_len = es->es_pblk = 0;
@@ -940,7 +940,7 @@ int pxt4_es_lookup_extent(struct inode *inode, pxt4_lblk_t lblk,
 	}
 
 out:
-	stats = &EXT4_SB(inode->i_sb)->s_es_stats;
+	stats = &PXT4_SB(inode->i_sb)->s_es_stats;
 	if (found) {
 		BUG_ON(!es1);
 		es->es_lblk = es1->es_lblk;
@@ -962,7 +962,7 @@ out:
 		percpu_counter_inc(&stats->es_stats_cache_misses);
 	}
 
-	read_unlock(&EXT4_I(inode)->i_es_lock);
+	read_unlock(&PXT4_I(inode)->i_es_lock);
 
 	trace_pxt4_es_lookup_extent_exit(inode, es, found);
 	return found;
@@ -992,7 +992,7 @@ struct rsvd_count {
 static void init_rsvd(struct inode *inode, pxt4_lblk_t lblk,
 		      struct extent_status *es, struct rsvd_count *rc)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct rb_node *node;
 
 	rc->ndelonly = 0;
@@ -1034,7 +1034,7 @@ static void init_rsvd(struct inode *inode, pxt4_lblk_t lblk,
 static void count_rsvd(struct inode *inode, pxt4_lblk_t lblk, long len,
 		       struct extent_status *es, struct rsvd_count *rc)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	pxt4_lblk_t i, end, nclu;
 
 	if (!pxt4_es_is_delonly(es))
@@ -1066,7 +1066,7 @@ static void count_rsvd(struct inode *inode, pxt4_lblk_t lblk, long len,
 	 * if we're tracking a partial cluster and the current extent
 	 * doesn't start with it, count it and stop tracking
 	 */
-	if (rc->partial && (rc->lclu != EXT4_B2C(sbi, i))) {
+	if (rc->partial && (rc->lclu != PXT4_B2C(sbi, i))) {
 		rc->ndelonly++;
 		rc->partial = false;
 	}
@@ -1075,11 +1075,11 @@ static void count_rsvd(struct inode *inode, pxt4_lblk_t lblk, long len,
 	 * if the first cluster doesn't start on a cluster boundary but
 	 * ends on one, count it
 	 */
-	if (EXT4_LBLK_COFF(sbi, i) != 0) {
-		if (end >= EXT4_LBLK_CFILL(sbi, i)) {
+	if (PXT4_LBLK_COFF(sbi, i) != 0) {
+		if (end >= PXT4_LBLK_CFILL(sbi, i)) {
 			rc->ndelonly++;
 			rc->partial = false;
-			i = EXT4_LBLK_CFILL(sbi, i) + 1;
+			i = PXT4_LBLK_CFILL(sbi, i) + 1;
 		}
 	}
 
@@ -1099,7 +1099,7 @@ static void count_rsvd(struct inode *inode, pxt4_lblk_t lblk, long len,
 	 */
 	if (!rc->partial && i <= end) {
 		rc->partial = true;
-		rc->lclu = EXT4_B2C(sbi, i);
+		rc->lclu = PXT4_B2C(sbi, i);
 	}
 }
 
@@ -1158,9 +1158,9 @@ static unsigned int get_rsvd(struct inode *inode, pxt4_lblk_t end,
 			     struct extent_status *right_es,
 			     struct rsvd_count *rc)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct pending_reservation *pr;
-	struct pxt4_pending_tree *tree = &EXT4_I(inode)->i_pending_tree;
+	struct pxt4_pending_tree *tree = &PXT4_I(inode)->i_pending_tree;
 	struct rb_node *node;
 	pxt4_lblk_t first_lclu, last_lclu;
 	bool left_delonly, right_delonly, count_pending;
@@ -1174,8 +1174,8 @@ static unsigned int get_rsvd(struct inode *inode, pxt4_lblk_t end,
 		if (rc->ndelonly == 0)
 			return 0;
 
-		first_lclu = EXT4_B2C(sbi, rc->first_do_lblk);
-		last_lclu = EXT4_B2C(sbi, rc->last_do_lblk);
+		first_lclu = PXT4_B2C(sbi, rc->first_do_lblk);
+		last_lclu = PXT4_B2C(sbi, rc->last_do_lblk);
 
 		/*
 		 * decrease the delonly count by the number of clusters at the
@@ -1186,7 +1186,7 @@ static unsigned int get_rsvd(struct inode *inode, pxt4_lblk_t end,
 
 		es = rc->left_es;
 		while (es && pxt4_es_end(es) >=
-		       EXT4_LBLK_CMASK(sbi, rc->first_do_lblk)) {
+		       PXT4_LBLK_CMASK(sbi, rc->first_do_lblk)) {
 			if (pxt4_es_is_delonly(es)) {
 				rc->ndelonly--;
 				left_delonly = true;
@@ -1206,7 +1206,7 @@ static unsigned int get_rsvd(struct inode *inode, pxt4_lblk_t end,
 						     rb_node) : NULL;
 			}
 			while (es && es->es_lblk <=
-			       EXT4_LBLK_CFILL(sbi, rc->last_do_lblk)) {
+			       PXT4_LBLK_CFILL(sbi, rc->last_do_lblk)) {
 				if (pxt4_es_is_delonly(es)) {
 					rc->ndelonly--;
 					right_delonly = true;
@@ -1285,7 +1285,7 @@ static unsigned int get_rsvd(struct inode *inode, pxt4_lblk_t end,
 static int __es_remove_extent(struct inode *inode, pxt4_lblk_t lblk,
 			      pxt4_lblk_t end, int *reserved)
 {
-	struct pxt4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct pxt4_es_tree *tree = &PXT4_I(inode)->i_es_tree;
 	struct rb_node *node;
 	struct extent_status *es;
 	struct extent_status orig_es;
@@ -1337,8 +1337,8 @@ retry:
 				es->es_lblk = orig_es.es_lblk;
 				es->es_len = orig_es.es_len;
 				if ((err == -ENOMEM) &&
-				    __es_shrink(EXT4_SB(inode->i_sb),
-							128, EXT4_I(inode)))
+				    __es_shrink(PXT4_SB(inode->i_sb),
+							128, PXT4_I(inode)))
 					goto retry;
 				goto out;
 			}
@@ -1434,9 +1434,9 @@ int pxt4_es_remove_extent(struct inode *inode, pxt4_lblk_t lblk,
 	 * so that we are sure __es_shrink() is done with the inode before it
 	 * is reclaimed.
 	 */
-	write_lock(&EXT4_I(inode)->i_es_lock);
+	write_lock(&PXT4_I(inode)->i_es_lock);
 	err = __es_remove_extent(inode, lblk, end, &reserved);
-	write_unlock(&EXT4_I(inode)->i_es_lock);
+	write_unlock(&PXT4_I(inode)->i_es_lock);
 	pxt4_es_print_tree(inode);
 	pxt4_da_release_space(inode, reserved);
 	return err;
@@ -1474,7 +1474,7 @@ retry:
 		 * but we will as a last resort.
 		 */
 		if (!retried && pxt4_test_inode_state(&ei->vfs_inode,
-						EXT4_STATE_EXT_PRECACHED)) {
+						PXT4_STATE_EXT_PRECACHED)) {
 			nr_skipped++;
 			continue;
 		}
@@ -1562,7 +1562,7 @@ static unsigned long pxt4_es_scan(struct shrinker *shrink,
 
 int pxt4_seq_es_shrinker_info_show(struct seq_file *seq, void *v)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB((struct super_block *) seq->private);
+	struct pxt4_sb_info *sbi = PXT4_SB((struct super_block *) seq->private);
 	struct pxt4_es_stats *es_stats = &sbi->s_es_stats;
 	struct pxt4_inode_info *ei, *max = NULL;
 	unsigned int inode_cnt = 0;
@@ -1723,7 +1723,7 @@ static int es_reclaim_extents(struct pxt4_inode_info *ei, int *nr_to_scan)
 	if (ei->i_es_shk_nr == 0)
 		return 0;
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_EXT_PRECACHED) &&
+	if (pxt4_test_inode_state(inode, PXT4_STATE_EXT_PRECACHED) &&
 	    __ratelimit(&_rs))
 		pxt4_warning(inode->i_sb, "forced shrink of precached extents");
 
@@ -1736,19 +1736,19 @@ static int es_reclaim_extents(struct pxt4_inode_info *ei, int *nr_to_scan)
 }
 
 /*
- * Called to support EXT4_IOC_CLEAR_ES_CACHE.  We can only remove
+ * Called to support PXT4_IOC_CLEAR_ES_CACHE.  We can only remove
  * discretionary entries from the extent status cache.  (Some entries
  * must be present for proper operations.)
  */
 void pxt4_clear_inode_es(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct extent_status *es;
 	struct pxt4_es_tree *tree;
 	struct rb_node *node;
 
 	write_lock(&ei->i_es_lock);
-	tree = &EXT4_I(inode)->i_es_tree;
+	tree = &PXT4_I(inode)->i_es_tree;
 	tree->cache_es = NULL;
 	node = rb_first(&tree->root);
 	while (node) {
@@ -1759,7 +1759,7 @@ void pxt4_clear_inode_es(struct inode *inode)
 			pxt4_es_free_extent(inode, es);
 		}
 	}
-	pxt4_clear_inode_state(inode, EXT4_STATE_EXT_PRECACHED);
+	pxt4_clear_inode_state(inode, PXT4_STATE_EXT_PRECACHED);
 	write_unlock(&ei->i_es_lock);
 }
 
@@ -1771,7 +1771,7 @@ static void pxt4_print_pending_tree(struct inode *inode)
 	struct pending_reservation *pr;
 
 	printk(KERN_DEBUG "pending reservations for inode %lu:", inode->i_ino);
-	tree = &EXT4_I(inode)->i_pending_tree;
+	tree = &PXT4_I(inode)->i_pending_tree;
 	node = rb_first(&tree->root);
 	while (node) {
 		pr = rb_entry(node, struct pending_reservation, rb_node);
@@ -1820,7 +1820,7 @@ static struct pending_reservation *__get_pending(struct inode *inode,
 	struct rb_node *node;
 	struct pending_reservation *pr = NULL;
 
-	tree = &EXT4_I(inode)->i_pending_tree;
+	tree = &PXT4_I(inode)->i_pending_tree;
 	node = (&tree->root)->rb_node;
 
 	while (node) {
@@ -1847,15 +1847,15 @@ static struct pending_reservation *__get_pending(struct inode *inode,
  */
 static int __insert_pending(struct inode *inode, pxt4_lblk_t lblk)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_pending_tree *tree = &EXT4_I(inode)->i_pending_tree;
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_pending_tree *tree = &PXT4_I(inode)->i_pending_tree;
 	struct rb_node **p = &tree->root.rb_node;
 	struct rb_node *parent = NULL;
 	struct pending_reservation *pr;
 	pxt4_lblk_t lclu;
 	int ret = 0;
 
-	lclu = EXT4_B2C(sbi, lblk);
+	lclu = PXT4_B2C(sbi, lblk);
 	/* search to find parent for insertion */
 	while (*p) {
 		parent = *p;
@@ -1896,13 +1896,13 @@ out:
  */
 static void __remove_pending(struct inode *inode, pxt4_lblk_t lblk)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct pending_reservation *pr;
 	struct pxt4_pending_tree *tree;
 
-	pr = __get_pending(inode, EXT4_B2C(sbi, lblk));
+	pr = __get_pending(inode, PXT4_B2C(sbi, lblk));
 	if (pr != NULL) {
-		tree = &EXT4_I(inode)->i_pending_tree;
+		tree = &PXT4_I(inode)->i_pending_tree;
 		rb_erase(&pr->rb_node, &tree->root);
 		kmem_cache_free(pxt4_pending_cachep, pr);
 	}
@@ -1919,7 +1919,7 @@ static void __remove_pending(struct inode *inode, pxt4_lblk_t lblk)
  */
 void pxt4_remove_pending(struct inode *inode, pxt4_lblk_t lblk)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
 	write_lock(&ei->i_es_lock);
 	__remove_pending(inode, lblk);
@@ -1938,12 +1938,12 @@ void pxt4_remove_pending(struct inode *inode, pxt4_lblk_t lblk)
  */
 bool pxt4_is_pending(struct inode *inode, pxt4_lblk_t lblk)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	bool ret;
 
 	read_lock(&ei->i_es_lock);
-	ret = (bool)(__get_pending(inode, EXT4_B2C(sbi, lblk)) != NULL);
+	ret = (bool)(__get_pending(inode, PXT4_B2C(sbi, lblk)) != NULL);
 	read_unlock(&ei->i_es_lock);
 
 	return ret;
@@ -1977,15 +1977,15 @@ int pxt4_es_insert_delayed_block(struct inode *inode, pxt4_lblk_t lblk,
 
 	pxt4_es_insert_extent_check(inode, &newes);
 
-	write_lock(&EXT4_I(inode)->i_es_lock);
+	write_lock(&PXT4_I(inode)->i_es_lock);
 
 	err = __es_remove_extent(inode, lblk, lblk, NULL);
 	if (err != 0)
 		goto error;
 retry:
 	err = __es_insert_extent(inode, &newes);
-	if (err == -ENOMEM && __es_shrink(EXT4_SB(inode->i_sb),
-					  128, EXT4_I(inode)))
+	if (err == -ENOMEM && __es_shrink(PXT4_SB(inode->i_sb),
+					  128, PXT4_I(inode)))
 		goto retry;
 	if (err != 0)
 		goto error;
@@ -1994,7 +1994,7 @@ retry:
 		__insert_pending(inode, lblk);
 
 error:
-	write_unlock(&EXT4_I(inode)->i_es_lock);
+	write_unlock(&PXT4_I(inode)->i_es_lock);
 
 	pxt4_es_print_tree(inode);
 	pxt4_print_pending_tree(inode);
@@ -2018,9 +2018,9 @@ error:
 static unsigned int __es_delayed_clu(struct inode *inode, pxt4_lblk_t start,
 				     pxt4_lblk_t end)
 {
-	struct pxt4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct pxt4_es_tree *tree = &PXT4_I(inode)->i_es_tree;
 	struct extent_status *es;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct rb_node *node;
 	pxt4_lblk_t first_lclu, last_lclu;
 	unsigned long long last_counted_lclu;
@@ -2034,14 +2034,14 @@ static unsigned int __es_delayed_clu(struct inode *inode, pxt4_lblk_t start,
 	while (es && (es->es_lblk <= end)) {
 		if (pxt4_es_is_delonly(es)) {
 			if (es->es_lblk <= start)
-				first_lclu = EXT4_B2C(sbi, start);
+				first_lclu = PXT4_B2C(sbi, start);
 			else
-				first_lclu = EXT4_B2C(sbi, es->es_lblk);
+				first_lclu = PXT4_B2C(sbi, es->es_lblk);
 
 			if (pxt4_es_end(es) >= end)
-				last_lclu = EXT4_B2C(sbi, end);
+				last_lclu = PXT4_B2C(sbi, end);
 			else
-				last_lclu = EXT4_B2C(sbi, pxt4_es_end(es));
+				last_lclu = PXT4_B2C(sbi, pxt4_es_end(es));
 
 			if (first_lclu == last_counted_lclu)
 				n += last_lclu - first_lclu;
@@ -2071,7 +2071,7 @@ static unsigned int __es_delayed_clu(struct inode *inode, pxt4_lblk_t start,
 unsigned int pxt4_es_delayed_clu(struct inode *inode, pxt4_lblk_t lblk,
 				 pxt4_lblk_t len)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	pxt4_lblk_t end;
 	unsigned int n;
 
@@ -2108,7 +2108,7 @@ unsigned int pxt4_es_delayed_clu(struct inode *inode, pxt4_lblk_t lblk,
 static void __revise_pending(struct inode *inode, pxt4_lblk_t lblk,
 			     pxt4_lblk_t len)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	pxt4_lblk_t end = lblk + len - 1;
 	pxt4_lblk_t first, last;
 	bool f_del = false, l_del = false;
@@ -2129,15 +2129,15 @@ static void __revise_pending(struct inode *inode, pxt4_lblk_t lblk,
 	 * inserted in the extents status tree due to ENOSPC.
 	 */
 
-	if (EXT4_B2C(sbi, lblk) == EXT4_B2C(sbi, end)) {
-		first = EXT4_LBLK_CMASK(sbi, lblk);
+	if (PXT4_B2C(sbi, lblk) == PXT4_B2C(sbi, end)) {
+		first = PXT4_LBLK_CMASK(sbi, lblk);
 		if (first != lblk)
 			f_del = __es_scan_range(inode, &pxt4_es_is_delonly,
 						first, lblk - 1);
 		if (f_del) {
 			__insert_pending(inode, first);
 		} else {
-			last = EXT4_LBLK_CMASK(sbi, end) +
+			last = PXT4_LBLK_CMASK(sbi, end) +
 			       sbi->s_cluster_ratio - 1;
 			if (last != end)
 				l_del = __es_scan_range(inode,
@@ -2149,7 +2149,7 @@ static void __revise_pending(struct inode *inode, pxt4_lblk_t lblk,
 				__remove_pending(inode, last);
 		}
 	} else {
-		first = EXT4_LBLK_CMASK(sbi, lblk);
+		first = PXT4_LBLK_CMASK(sbi, lblk);
 		if (first != lblk)
 			f_del = __es_scan_range(inode, &pxt4_es_is_delonly,
 						first, lblk - 1);
@@ -2158,7 +2158,7 @@ static void __revise_pending(struct inode *inode, pxt4_lblk_t lblk,
 		else
 			__remove_pending(inode, first);
 
-		last = EXT4_LBLK_CMASK(sbi, end) + sbi->s_cluster_ratio - 1;
+		last = PXT4_LBLK_CMASK(sbi, end) + sbi->s_cluster_ratio - 1;
 		if (last != end)
 			l_del = __es_scan_range(inode, &pxt4_es_is_delonly,
 						end + 1, last);

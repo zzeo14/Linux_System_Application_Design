@@ -27,7 +27,7 @@ get_ext_path(struct inode *inode, pxt4_lblk_t lblock,
 {
 	struct pxt4_ext_path *path;
 
-	path = pxt4_find_extent(inode, lblock, ppath, EXT4_EX_NOCACHE);
+	path = pxt4_find_extent(inode, lblock, ppath, PXT4_EX_NOCACHE);
 	if (IS_ERR(path))
 		return PTR_ERR(path);
 	if (path[ext_depth(inode)].p_ext == NULL) {
@@ -51,11 +51,11 @@ void
 pxt4_double_down_write_data_sem(struct inode *first, struct inode *second)
 {
 	if (first < second) {
-		down_write(&EXT4_I(first)->i_data_sem);
-		down_write_nested(&EXT4_I(second)->i_data_sem, I_DATA_SEM_OTHER);
+		down_write(&PXT4_I(first)->i_data_sem);
+		down_write_nested(&PXT4_I(second)->i_data_sem, I_DATA_SEM_OTHER);
 	} else {
-		down_write(&EXT4_I(second)->i_data_sem);
-		down_write_nested(&EXT4_I(first)->i_data_sem, I_DATA_SEM_OTHER);
+		down_write(&PXT4_I(second)->i_data_sem);
+		down_write_nested(&PXT4_I(first)->i_data_sem, I_DATA_SEM_OTHER);
 
 	}
 }
@@ -71,8 +71,8 @@ void
 pxt4_double_up_write_data_sem(struct inode *orig_inode,
 			      struct inode *donor_inode)
 {
-	up_write(&EXT4_I(orig_inode)->i_data_sem);
-	up_write(&EXT4_I(donor_inode)->i_data_sem);
+	up_write(&PXT4_I(orig_inode)->i_data_sem);
+	up_write(&PXT4_I(donor_inode)->i_data_sem);
 }
 
 /**
@@ -269,7 +269,7 @@ move_extent_per_page(struct file *o_filp, struct inode *donor_inode,
 again:
 	*err = 0;
 	jblocks = pxt4_writepage_trans_blocks(orig_inode) * 2;
-	handle = pxt4_journal_start(orig_inode, EXT4_HT_MOVE_EXTENTS, jblocks);
+	handle = pxt4_journal_start(orig_inode, PXT4_HT_MOVE_EXTENTS, jblocks);
 	if (IS_ERR(handle)) {
 		*err = PTR_ERR(handle);
 		return 0;
@@ -405,8 +405,8 @@ stop_journal:
 		goto again;
 	/* Buffer was busy because probably is pinned to journal transaction,
 	 * force transaction commit may help to free it. */
-	if (*err == -EBUSY && retries++ < 4 && EXT4_SB(sb)->s_journal &&
-	    jbd3_journal_force_commit_nested(EXT4_SB(sb)->s_journal))
+	if (*err == -EBUSY && retries++ < 4 && PXT4_SB(sb)->s_journal &&
+	    jbd3_journal_force_commit_nested(PXT4_SB(sb)->s_journal))
 		goto again;
 	return replaced_count;
 
@@ -422,7 +422,7 @@ repair_branches:
 					   block_len_in_page, 0, &err2);
 	pxt4_double_up_write_data_sem(orig_inode, donor_inode);
 	if (replaced_count != block_len_in_page) {
-		EXT4_ERROR_INODE_BLOCK(orig_inode, (sector_t)(orig_blk_offset),
+		PXT4_ERROR_INODE_BLOCK(orig_inode, (sector_t)(orig_blk_offset),
 				       "Unable to copy data block,"
 				       " data will be lost.");
 		*err = -EIO;
@@ -483,11 +483,11 @@ mext_check_arguments(struct inode *orig_inode,
 	}
 
 	/* Ext4 move extent supports only extent based file */
-	if (!(pxt4_test_inode_flag(orig_inode, EXT4_INODE_EXTENTS))) {
+	if (!(pxt4_test_inode_flag(orig_inode, PXT4_INODE_EXTENTS))) {
 		pxt4_debug("pxt4 move extent: orig file is not extents "
 			"based file [ino:orig %lu]\n", orig_inode->i_ino);
 		return -EOPNOTSUPP;
-	} else if (!(pxt4_test_inode_flag(donor_inode, EXT4_INODE_EXTENTS))) {
+	} else if (!(pxt4_test_inode_flag(donor_inode, PXT4_INODE_EXTENTS))) {
 		pxt4_debug("pxt4 move extent: donor file is not extents "
 			"based file [ino:donor %lu]\n", donor_inode->i_ino);
 		return -EOPNOTSUPP;

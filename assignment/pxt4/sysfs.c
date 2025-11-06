@@ -75,7 +75,7 @@ static ssize_t lifetime_write_kbytes_show(struct pxt4_sb_info *sbi, char *buf)
 			(unsigned long long)(sbi->s_kbytes_written +
 			((part_stat_read(sb->s_bdev->bd_part,
 					 sectors[STAT_WRITE]) -
-			  EXT4_SB(sb)->s_sectors_written_start) >> 1)));
+			  PXT4_SB(sb)->s_sectors_written_start) >> 1)));
 }
 
 static ssize_t inode_readahead_blks_store(struct pxt4_sb_info *sbi,
@@ -135,17 +135,17 @@ static ssize_t journal_task_show(struct pxt4_sb_info *sbi, char *buf)
 			task_pid_vnr(sbi->s_journal->j_task));
 }
 
-#define EXT4_ATTR(_name,_mode,_id)					\
+#define PXT4_ATTR(_name,_mode,_id)					\
 static struct pxt4_attr pxt4_attr_##_name = {				\
 	.attr = {.name = __stringify(_name), .mode = _mode },		\
 	.attr_id = attr_##_id,						\
 }
 
-#define EXT4_ATTR_FUNC(_name,_mode)  EXT4_ATTR(_name,_mode,_name)
+#define PXT4_ATTR_FUNC(_name,_mode)  PXT4_ATTR(_name,_mode,_name)
 
-#define EXT4_ATTR_FEATURE(_name)   EXT4_ATTR(_name, 0444, feature)
+#define PXT4_ATTR_FEATURE(_name)   PXT4_ATTR(_name, 0444, feature)
 
-#define EXT4_ATTR_OFFSET(_name,_mode,_id,_struct,_elname)	\
+#define PXT4_ATTR_OFFSET(_name,_mode,_id,_struct,_elname)	\
 static struct pxt4_attr pxt4_attr_##_name = {			\
 	.attr = {.name = __stringify(_name), .mode = _mode },	\
 	.attr_id = attr_##_id,					\
@@ -155,13 +155,13 @@ static struct pxt4_attr pxt4_attr_##_name = {			\
 	},							\
 }
 
-#define EXT4_RO_ATTR_ES_UI(_name,_elname)				\
-	EXT4_ATTR_OFFSET(_name, 0444, pointer_ui, pxt4_super_block, _elname)
+#define PXT4_RO_ATTR_ES_UI(_name,_elname)				\
+	PXT4_ATTR_OFFSET(_name, 0444, pointer_ui, pxt4_super_block, _elname)
 
-#define EXT4_RW_ATTR_SBI_UI(_name,_elname)	\
-	EXT4_ATTR_OFFSET(_name, 0644, pointer_ui, pxt4_sb_info, _elname)
+#define PXT4_RW_ATTR_SBI_UI(_name,_elname)	\
+	PXT4_ATTR_OFFSET(_name, 0644, pointer_ui, pxt4_sb_info, _elname)
 
-#define EXT4_ATTR_PTR(_name,_mode,_id,_ptr) \
+#define PXT4_ATTR_PTR(_name,_mode,_id,_ptr) \
 static struct pxt4_attr pxt4_attr_##_name = {			\
 	.attr = {.name = __stringify(_name), .mode = _mode },	\
 	.attr_id = attr_##_id,					\
@@ -173,36 +173,36 @@ static struct pxt4_attr pxt4_attr_##_name = {			\
 
 #define ATTR_LIST(name) &pxt4_attr_##name.attr
 
-EXT4_ATTR_FUNC(delayed_allocation_blocks, 0444);
-EXT4_ATTR_FUNC(session_write_kbytes, 0444);
-EXT4_ATTR_FUNC(lifetime_write_kbytes, 0444);
-EXT4_ATTR_FUNC(reserved_clusters, 0644);
-EXT4_ATTR_FUNC(sra_exceeded_retry_limit, 0444);
+PXT4_ATTR_FUNC(delayed_allocation_blocks, 0444);
+PXT4_ATTR_FUNC(session_write_kbytes, 0444);
+PXT4_ATTR_FUNC(lifetime_write_kbytes, 0444);
+PXT4_ATTR_FUNC(reserved_clusters, 0644);
+PXT4_ATTR_FUNC(sra_exceeded_retry_limit, 0444);
 
-EXT4_ATTR_OFFSET(inode_readahead_blks, 0644, inode_readahead,
+PXT4_ATTR_OFFSET(inode_readahead_blks, 0644, inode_readahead,
 		 pxt4_sb_info, s_inode_readahead_blks);
-EXT4_RW_ATTR_SBI_UI(inode_goal, s_inode_goal);
-EXT4_RW_ATTR_SBI_UI(mb_stats, s_mb_stats);
-EXT4_RW_ATTR_SBI_UI(mb_max_to_scan, s_mb_max_to_scan);
-EXT4_RW_ATTR_SBI_UI(mb_min_to_scan, s_mb_min_to_scan);
-EXT4_RW_ATTR_SBI_UI(mb_order2_req, s_mb_order2_reqs);
-EXT4_RW_ATTR_SBI_UI(mb_stream_req, s_mb_stream_request);
-EXT4_RW_ATTR_SBI_UI(mb_group_prealloc, s_mb_group_prealloc);
-EXT4_RW_ATTR_SBI_UI(extent_max_zeroout_kb, s_extent_max_zeroout_kb);
-EXT4_ATTR(trigger_fs_error, 0200, trigger_test_error);
-EXT4_RW_ATTR_SBI_UI(err_ratelimit_interval_ms, s_err_ratelimit_state.interval);
-EXT4_RW_ATTR_SBI_UI(err_ratelimit_burst, s_err_ratelimit_state.burst);
-EXT4_RW_ATTR_SBI_UI(warning_ratelimit_interval_ms, s_warning_ratelimit_state.interval);
-EXT4_RW_ATTR_SBI_UI(warning_ratelimit_burst, s_warning_ratelimit_state.burst);
-EXT4_RW_ATTR_SBI_UI(msg_ratelimit_interval_ms, s_msg_ratelimit_state.interval);
-EXT4_RW_ATTR_SBI_UI(msg_ratelimit_burst, s_msg_ratelimit_state.burst);
-EXT4_RO_ATTR_ES_UI(errors_count, s_error_count);
-EXT4_ATTR(first_error_time, 0444, first_error_time);
-EXT4_ATTR(last_error_time, 0444, last_error_time);
-EXT4_ATTR(journal_task, 0444, journal_task);
+PXT4_RW_ATTR_SBI_UI(inode_goal, s_inode_goal);
+PXT4_RW_ATTR_SBI_UI(mb_stats, s_mb_stats);
+PXT4_RW_ATTR_SBI_UI(mb_max_to_scan, s_mb_max_to_scan);
+PXT4_RW_ATTR_SBI_UI(mb_min_to_scan, s_mb_min_to_scan);
+PXT4_RW_ATTR_SBI_UI(mb_order2_req, s_mb_order2_reqs);
+PXT4_RW_ATTR_SBI_UI(mb_stream_req, s_mb_stream_request);
+PXT4_RW_ATTR_SBI_UI(mb_group_prealloc, s_mb_group_prealloc);
+PXT4_RW_ATTR_SBI_UI(extent_max_zeroout_kb, s_extent_max_zeroout_kb);
+PXT4_ATTR(trigger_fs_error, 0200, trigger_test_error);
+PXT4_RW_ATTR_SBI_UI(err_ratelimit_interval_ms, s_err_ratelimit_state.interval);
+PXT4_RW_ATTR_SBI_UI(err_ratelimit_burst, s_err_ratelimit_state.burst);
+PXT4_RW_ATTR_SBI_UI(warning_ratelimit_interval_ms, s_warning_ratelimit_state.interval);
+PXT4_RW_ATTR_SBI_UI(warning_ratelimit_burst, s_warning_ratelimit_state.burst);
+PXT4_RW_ATTR_SBI_UI(msg_ratelimit_interval_ms, s_msg_ratelimit_state.interval);
+PXT4_RW_ATTR_SBI_UI(msg_ratelimit_burst, s_msg_ratelimit_state.burst);
+PXT4_RO_ATTR_ES_UI(errors_count, s_error_count);
+PXT4_ATTR(first_error_time, 0444, first_error_time);
+PXT4_ATTR(last_error_time, 0444, last_error_time);
+PXT4_ATTR(journal_task, 0444, journal_task);
 
 static unsigned int old_bump_val = 128;
-EXT4_ATTR_PTR(max_writeback_mb_bump, 0444, pointer_ui, &old_bump_val);
+PXT4_ATTR_PTR(max_writeback_mb_bump, 0444, pointer_ui, &old_bump_val);
 
 static struct attribute *pxt4_attrs[] = {
 	ATTR_LIST(delayed_allocation_blocks),
@@ -236,19 +236,19 @@ static struct attribute *pxt4_attrs[] = {
 ATTRIBUTE_GROUPS(pxt4);
 
 /* Features this copy of pxt4 supports */
-EXT4_ATTR_FEATURE(lazy_itable_init);
-EXT4_ATTR_FEATURE(batched_discard);
-EXT4_ATTR_FEATURE(meta_bg_resize);
+PXT4_ATTR_FEATURE(lazy_itable_init);
+PXT4_ATTR_FEATURE(batched_discard);
+PXT4_ATTR_FEATURE(meta_bg_resize);
 #ifdef CONFIG_FS_ENCRYPTION
-EXT4_ATTR_FEATURE(encryption);
+PXT4_ATTR_FEATURE(encryption);
 #endif
 #ifdef CONFIG_UNICODE
-EXT4_ATTR_FEATURE(casefold);
+PXT4_ATTR_FEATURE(casefold);
 #endif
 #ifdef CONFIG_FS_VERITY
-EXT4_ATTR_FEATURE(verity);
+PXT4_ATTR_FEATURE(verity);
 #endif
-EXT4_ATTR_FEATURE(metadata_csum_seed);
+PXT4_ATTR_FEATURE(metadata_csum_seed);
 
 static struct attribute *pxt4_feat_attrs[] = {
 	ATTR_LIST(lazy_itable_init),
@@ -301,7 +301,7 @@ static ssize_t pxt4_attr_show(struct kobject *kobj,
 	switch (a->attr_id) {
 	case attr_delayed_allocation_blocks:
 		return snprintf(buf, PAGE_SIZE, "%llu\n",
-				(s64) EXT4_C2B(sbi,
+				(s64) PXT4_C2B(sbi,
 		       percpu_counter_sum(&sbi->s_dirtyclusters_counter)));
 	case attr_session_write_kbytes:
 		return session_write_kbytes_show(sbi, buf);
@@ -406,7 +406,7 @@ static struct kobject *pxt4_feat;
 
 int pxt4_register_sysfs(struct super_block *sb)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	int err;
 
 	init_completion(&sbi->s_kobj_unregister);
@@ -434,7 +434,7 @@ int pxt4_register_sysfs(struct super_block *sb)
 
 void pxt4_unregister_sysfs(struct super_block *sb)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	if (sbi->s_proc)
 		remove_proc_subtree(sb->s_id, pxt4_proc_root);

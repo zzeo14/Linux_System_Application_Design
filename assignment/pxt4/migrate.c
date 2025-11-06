@@ -33,7 +33,7 @@ static int finish_range(handle_t *handle, struct inode *inode,
 	newext.ee_len   = cpu_to_le16(lb->last_block - lb->first_block + 1);
 	pxt4_ext_store_pblock(&newext, lb->first_pblock);
 	/* Locking only for convinience since we are operating on temp inode */
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 	path = pxt4_find_extent(inode, lb->first_block, NULL, 0);
 	if (IS_ERR(path)) {
 		retval = PTR_ERR(path);
@@ -54,10 +54,10 @@ static int finish_range(handle_t *handle, struct inode *inode,
 	 * Make sure the credit we accumalated is not really high
 	 */
 	if (needed && pxt4_handle_has_enough_credits(handle,
-						EXT4_RESERVE_TRANS_BLOCKS)) {
-		up_write((&EXT4_I(inode)->i_data_sem));
+						PXT4_RESERVE_TRANS_BLOCKS)) {
+		up_write((&PXT4_I(inode)->i_data_sem));
 		retval = pxt4_journal_restart(handle, needed);
-		down_write((&EXT4_I(inode)->i_data_sem));
+		down_write((&PXT4_I(inode)->i_data_sem));
 		if (retval)
 			goto err_out;
 	} else if (needed) {
@@ -66,16 +66,16 @@ static int finish_range(handle_t *handle, struct inode *inode,
 			/*
 			 * IF not able to extend the journal restart the journal
 			 */
-			up_write((&EXT4_I(inode)->i_data_sem));
+			up_write((&PXT4_I(inode)->i_data_sem));
 			retval = pxt4_journal_restart(handle, needed);
-			down_write((&EXT4_I(inode)->i_data_sem));
+			down_write((&PXT4_I(inode)->i_data_sem));
 			if (retval)
 				goto err_out;
 		}
 	}
 	retval = pxt4_ext_insert_extent(handle, inode, &path, &newext, 0);
 err_out:
-	up_write((&EXT4_I(inode)->i_data_sem));
+	up_write((&PXT4_I(inode)->i_data_sem));
 	pxt4_ext_drop_refs(path);
 	kfree(path);
 	lb->first_pblock = 0;
@@ -200,7 +200,7 @@ static int extend_credit_for_blkdel(handle_t *handle, struct inode *inode)
 {
 	int retval = 0, needed;
 
-	if (pxt4_handle_has_enough_credits(handle, EXT4_RESERVE_TRANS_BLOCKS+1))
+	if (pxt4_handle_has_enough_credits(handle, PXT4_RESERVE_TRANS_BLOCKS+1))
 		return 0;
 	/*
 	 * We are freeing a blocks. During this we touch
@@ -208,7 +208,7 @@ static int extend_credit_for_blkdel(handle_t *handle, struct inode *inode)
 	 * So allocate a credit of 3. We may update
 	 * quota (user and group).
 	 */
-	needed = 3 + EXT4_MAXQUOTAS_TRANS_BLOCKS(inode->i_sb);
+	needed = 3 + PXT4_MAXQUOTAS_TRANS_BLOCKS(inode->i_sb);
 
 	if (pxt4_journal_extend(handle, needed) != 0)
 		retval = pxt4_journal_restart(handle, needed);
@@ -234,15 +234,15 @@ static int free_dind_blocks(handle_t *handle,
 			extend_credit_for_blkdel(handle, inode);
 			pxt4_free_blocks(handle, inode, NULL,
 					 le32_to_cpu(tmp_idata[i]), 1,
-					 EXT4_FREE_BLOCKS_METADATA |
-					 EXT4_FREE_BLOCKS_FORGET);
+					 PXT4_FREE_BLOCKS_METADATA |
+					 PXT4_FREE_BLOCKS_FORGET);
 		}
 	}
 	put_bh(bh);
 	extend_credit_for_blkdel(handle, inode);
 	pxt4_free_blocks(handle, inode, NULL, le32_to_cpu(i_data), 1,
-			 EXT4_FREE_BLOCKS_METADATA |
-			 EXT4_FREE_BLOCKS_FORGET);
+			 PXT4_FREE_BLOCKS_METADATA |
+			 PXT4_FREE_BLOCKS_FORGET);
 	return 0;
 }
 
@@ -272,8 +272,8 @@ static int free_tind_blocks(handle_t *handle,
 	put_bh(bh);
 	extend_credit_for_blkdel(handle, inode);
 	pxt4_free_blocks(handle, inode, NULL, le32_to_cpu(i_data), 1,
-			 EXT4_FREE_BLOCKS_METADATA |
-			 EXT4_FREE_BLOCKS_FORGET);
+			 PXT4_FREE_BLOCKS_METADATA |
+			 PXT4_FREE_BLOCKS_FORGET);
 	return 0;
 }
 
@@ -281,23 +281,23 @@ static int free_ind_block(handle_t *handle, struct inode *inode, __le32 *i_data)
 {
 	int retval;
 
-	/* ei->i_data[EXT4_IND_BLOCK] */
+	/* ei->i_data[PXT4_IND_BLOCK] */
 	if (i_data[0]) {
 		extend_credit_for_blkdel(handle, inode);
 		pxt4_free_blocks(handle, inode, NULL,
 				le32_to_cpu(i_data[0]), 1,
-				 EXT4_FREE_BLOCKS_METADATA |
-				 EXT4_FREE_BLOCKS_FORGET);
+				 PXT4_FREE_BLOCKS_METADATA |
+				 PXT4_FREE_BLOCKS_FORGET);
 	}
 
-	/* ei->i_data[EXT4_DIND_BLOCK] */
+	/* ei->i_data[PXT4_DIND_BLOCK] */
 	if (i_data[1]) {
 		retval = free_dind_blocks(handle, inode, i_data[1]);
 		if (retval)
 			return retval;
 	}
 
-	/* ei->i_data[EXT4_TIND_BLOCK] */
+	/* ei->i_data[PXT4_TIND_BLOCK] */
 	if (i_data[2]) {
 		retval = free_tind_blocks(handle, inode, i_data[2]);
 		if (retval)
@@ -311,8 +311,8 @@ static int pxt4_ext_swap_inode_data(handle_t *handle, struct inode *inode,
 {
 	int retval;
 	__le32	i_data[3];
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	struct pxt4_inode_info *tmp_ei = EXT4_I(tmp_inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	struct pxt4_inode_info *tmp_ei = PXT4_I(tmp_inode);
 
 	/*
 	 * One credit accounted for writing the
@@ -325,27 +325,27 @@ static int pxt4_ext_swap_inode_data(handle_t *handle, struct inode *inode,
 			goto err_out;
 	}
 
-	i_data[0] = ei->i_data[EXT4_IND_BLOCK];
-	i_data[1] = ei->i_data[EXT4_DIND_BLOCK];
-	i_data[2] = ei->i_data[EXT4_TIND_BLOCK];
+	i_data[0] = ei->i_data[PXT4_IND_BLOCK];
+	i_data[1] = ei->i_data[PXT4_DIND_BLOCK];
+	i_data[2] = ei->i_data[PXT4_TIND_BLOCK];
 
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 	/*
-	 * if EXT4_STATE_EXT_MIGRATE is cleared a block allocation
+	 * if PXT4_STATE_EXT_MIGRATE is cleared a block allocation
 	 * happened after we started the migrate. We need to
 	 * fail the migrate
 	 */
-	if (!pxt4_test_inode_state(inode, EXT4_STATE_EXT_MIGRATE)) {
+	if (!pxt4_test_inode_state(inode, PXT4_STATE_EXT_MIGRATE)) {
 		retval = -EAGAIN;
-		up_write(&EXT4_I(inode)->i_data_sem);
+		up_write(&PXT4_I(inode)->i_data_sem);
 		goto err_out;
 	} else
-		pxt4_clear_inode_state(inode, EXT4_STATE_EXT_MIGRATE);
+		pxt4_clear_inode_state(inode, PXT4_STATE_EXT_MIGRATE);
 	/*
 	 * We have the extent map build with the tmp inode.
 	 * Now copy the i_data across
 	 */
-	pxt4_set_inode_flag(inode, EXT4_INODE_EXTENTS);
+	pxt4_set_inode_flag(inode, PXT4_INODE_EXTENTS);
 	memcpy(ei->i_data, tmp_ei->i_data, sizeof(ei->i_data));
 
 	/*
@@ -360,7 +360,7 @@ static int pxt4_ext_swap_inode_data(handle_t *handle, struct inode *inode,
 	spin_lock(&inode->i_lock);
 	inode->i_blocks += tmp_inode->i_blocks;
 	spin_unlock(&inode->i_lock);
-	up_write(&EXT4_I(inode)->i_data_sem);
+	up_write(&PXT4_I(inode)->i_data_sem);
 
 	/*
 	 * We mark the inode dirty after, because we decrement the
@@ -398,7 +398,7 @@ static int free_ext_idx(handle_t *handle, struct inode *inode,
 	put_bh(bh);
 	extend_credit_for_blkdel(handle, inode);
 	pxt4_free_blocks(handle, inode, NULL, block, 1,
-			 EXT4_FREE_BLOCKS_METADATA | EXT4_FREE_BLOCKS_FORGET);
+			 PXT4_FREE_BLOCKS_METADATA | PXT4_FREE_BLOCKS_FORGET);
 	return retval;
 }
 
@@ -408,7 +408,7 @@ static int free_ext_idx(handle_t *handle, struct inode *inode,
 static int free_ext_block(handle_t *handle, struct inode *inode)
 {
 	int i, retval = 0;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct pxt4_extent_header *eh = (struct pxt4_extent_header *)ei->i_data;
 	struct pxt4_extent_idx *ix;
 	if (eh->eh_depth == 0)
@@ -427,7 +427,7 @@ static int free_ext_block(handle_t *handle, struct inode *inode)
 
 int pxt4_ext_migrate(struct inode *inode)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	handle_t *handle;
 	int retval = 0, i;
 	__le32 *i_data;
@@ -443,7 +443,7 @@ int pxt4_ext_migrate(struct inode *inode)
 	 * already is extent-based, error out.
 	 */
 	if (!pxt4_has_feature_extents(inode->i_sb) ||
-	    (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)))
+	    (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)))
 		return -EINVAL;
 
 	if (S_ISLNK(inode->i_mode) && inode->i_blocks == 0)
@@ -459,15 +459,15 @@ int pxt4_ext_migrate(struct inode *inode)
 	 * group descriptor block.  We do need need to worry about
 	 * credits for modifying the quota inode.
 	 */
-	handle = pxt4_journal_start(inode, EXT4_HT_MIGRATE,
-		3 + EXT4_MAXQUOTAS_TRANS_BLOCKS(inode->i_sb));
+	handle = pxt4_journal_start(inode, PXT4_HT_MIGRATE,
+		3 + PXT4_MAXQUOTAS_TRANS_BLOCKS(inode->i_sb));
 
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		goto out_unlock;
 	}
-	goal = (((inode->i_ino - 1) / EXT4_INODES_PER_GROUP(inode->i_sb)) *
-		EXT4_INODES_PER_GROUP(inode->i_sb)) + 1;
+	goal = (((inode->i_ino - 1) / PXT4_INODES_PER_GROUP(inode->i_sb)) *
+		PXT4_INODES_PER_GROUP(inode->i_sb)) + 1;
 	owner[0] = i_uid_read(inode);
 	owner[1] = i_gid_read(inode);
 	tmp_inode = pxt4_new_inode(handle, d_inode(inode->i_sb->s_root),
@@ -482,9 +482,9 @@ int pxt4_ext_migrate(struct inode *inode)
 	 * is so that the metadata blocks will have the correct checksum after
 	 * the migration.
 	 */
-	ei = EXT4_I(inode);
-	tmp_csum_seed = EXT4_I(tmp_inode)->i_csum_seed;
-	EXT4_I(tmp_inode)->i_csum_seed = ei->i_csum_seed;
+	ei = PXT4_I(inode);
+	tmp_csum_seed = PXT4_I(tmp_inode)->i_csum_seed;
+	PXT4_I(tmp_inode)->i_csum_seed = ei->i_csum_seed;
 	i_size_write(tmp_inode, i_size_read(inode));
 	/*
 	 * Set the i_nlink to zero so it will be deleted later
@@ -507,15 +507,15 @@ int pxt4_ext_migrate(struct inode *inode)
 	 * Even though we take i_mutex we can still cause block
 	 * allocation via mmap write to holes. If we have allocated
 	 * new blocks we fail migrate.  New block allocation will
-	 * clear EXT4_STATE_EXT_MIGRATE flag.  The flag is updated
+	 * clear PXT4_STATE_EXT_MIGRATE flag.  The flag is updated
 	 * with i_data_sem held to prevent racing with block
 	 * allocation.
 	 */
-	down_read(&EXT4_I(inode)->i_data_sem);
-	pxt4_set_inode_state(inode, EXT4_STATE_EXT_MIGRATE);
-	up_read((&EXT4_I(inode)->i_data_sem));
+	down_read(&PXT4_I(inode)->i_data_sem);
+	pxt4_set_inode_state(inode, PXT4_STATE_EXT_MIGRATE);
+	up_read((&PXT4_I(inode)->i_data_sem));
 
-	handle = pxt4_journal_start(inode, EXT4_HT_MIGRATE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_MIGRATE, 1);
 	if (IS_ERR(handle)) {
 		retval = PTR_ERR(handle);
 		goto out_tmp_inode;
@@ -526,7 +526,7 @@ int pxt4_ext_migrate(struct inode *inode)
 
 	/* 32 bit block address 4 bytes */
 	max_entries = inode->i_sb->s_blocksize >> 2;
-	for (i = 0; i < EXT4_NDIR_BLOCKS; i++) {
+	for (i = 0; i < PXT4_NDIR_BLOCKS; i++) {
 		if (i_data[i]) {
 			retval = update_extent_range(handle, tmp_inode,
 						le32_to_cpu(i_data[i]), &lb);
@@ -535,23 +535,23 @@ int pxt4_ext_migrate(struct inode *inode)
 		} else
 			lb.curr_block++;
 	}
-	if (i_data[EXT4_IND_BLOCK]) {
+	if (i_data[PXT4_IND_BLOCK]) {
 		retval = update_ind_extent_range(handle, tmp_inode,
-				le32_to_cpu(i_data[EXT4_IND_BLOCK]), &lb);
+				le32_to_cpu(i_data[PXT4_IND_BLOCK]), &lb);
 		if (retval)
 			goto err_out;
 	} else
 		lb.curr_block += max_entries;
-	if (i_data[EXT4_DIND_BLOCK]) {
+	if (i_data[PXT4_DIND_BLOCK]) {
 		retval = update_dind_extent_range(handle, tmp_inode,
-				le32_to_cpu(i_data[EXT4_DIND_BLOCK]), &lb);
+				le32_to_cpu(i_data[PXT4_DIND_BLOCK]), &lb);
 		if (retval)
 			goto err_out;
 	} else
 		lb.curr_block += max_entries * max_entries;
-	if (i_data[EXT4_TIND_BLOCK]) {
+	if (i_data[PXT4_TIND_BLOCK]) {
 		retval = update_tind_extent_range(handle, tmp_inode,
-				le32_to_cpu(i_data[EXT4_TIND_BLOCK]), &lb);
+				le32_to_cpu(i_data[PXT4_TIND_BLOCK]), &lb);
 		if (retval)
 			goto err_out;
 	}
@@ -594,7 +594,7 @@ err_out:
 	 * the inode is not visible to user space.
 	 */
 	tmp_inode->i_blocks = 0;
-	EXT4_I(tmp_inode)->i_csum_seed = tmp_csum_seed;
+	PXT4_I(tmp_inode)->i_csum_seed = tmp_csum_seed;
 
 	/* Reset the extent details */
 	pxt4_ext_tree_init(handle, tmp_inode);
@@ -613,9 +613,9 @@ out_unlock:
 int pxt4_ind_migrate(struct inode *inode)
 {
 	struct pxt4_extent_header	*eh;
-	struct pxt4_sb_info		*sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info		*sbi = PXT4_SB(inode->i_sb);
 	struct pxt4_super_block		*es = sbi->s_es;
-	struct pxt4_inode_info		*ei = EXT4_I(inode);
+	struct pxt4_inode_info		*ei = PXT4_I(inode);
 	struct pxt4_extent		*ex;
 	unsigned int			i, len;
 	pxt4_lblk_t			start, end;
@@ -624,7 +624,7 @@ int pxt4_ind_migrate(struct inode *inode)
 	int				ret;
 
 	if (!pxt4_has_feature_extents(inode->i_sb) ||
-	    (!pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)))
+	    (!pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)))
 		return -EINVAL;
 
 	if (pxt4_has_feature_bigalloc(inode->i_sb))
@@ -640,20 +640,20 @@ int pxt4_ind_migrate(struct inode *inode)
 
 	percpu_down_write(&sbi->s_writepages_rwsem);
 
-	handle = pxt4_journal_start(inode, EXT4_HT_MIGRATE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_MIGRATE, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		goto out_unlock;
 	}
 
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 	ret = pxt4_ext_check_inode(inode);
 	if (ret)
 		goto errout;
 
 	eh = ext_inode_hdr(inode);
 	ex  = EXT_FIRST_EXTENT(eh);
-	if (pxt4_blocks_count(es) > EXT4_MAX_BLOCK_FILE_PHYS ||
+	if (pxt4_blocks_count(es) > PXT4_MAX_BLOCK_FILE_PHYS ||
 	    eh->eh_depth != 0 || le16_to_cpu(eh->eh_entries) > 1) {
 		ret = -EOPNOTSUPP;
 		goto errout;
@@ -665,20 +665,20 @@ int pxt4_ind_migrate(struct inode *inode)
 		blk = pxt4_ext_pblock(ex);
 		start = le32_to_cpu(ex->ee_block);
 		end = start + len - 1;
-		if (end >= EXT4_NDIR_BLOCKS) {
+		if (end >= PXT4_NDIR_BLOCKS) {
 			ret = -EOPNOTSUPP;
 			goto errout;
 		}
 	}
 
-	pxt4_clear_inode_flag(inode, EXT4_INODE_EXTENTS);
+	pxt4_clear_inode_flag(inode, PXT4_INODE_EXTENTS);
 	memset(ei->i_data, 0, sizeof(ei->i_data));
 	for (i = start; i <= end; i++)
 		ei->i_data[i] = cpu_to_le32(blk++);
 	pxt4_mark_inode_dirty(handle, inode);
 errout:
 	pxt4_journal_stop(handle);
-	up_write(&EXT4_I(inode)->i_data_sem);
+	up_write(&PXT4_I(inode)->i_data_sem);
 out_unlock:
 	percpu_up_write(&sbi->s_writepages_rwsem);
 	return ret;

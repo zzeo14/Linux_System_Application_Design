@@ -65,18 +65,18 @@ static void swap_inode_data(struct inode *inode1, struct inode *inode2)
 	struct pxt4_inode_info *ei2;
 	unsigned long tmp;
 
-	ei1 = EXT4_I(inode1);
-	ei2 = EXT4_I(inode2);
+	ei1 = PXT4_I(inode1);
+	ei2 = PXT4_I(inode2);
 
 	swap(inode1->i_version, inode2->i_version);
 	swap(inode1->i_atime, inode2->i_atime);
 	swap(inode1->i_mtime, inode2->i_mtime);
 
 	memswap(ei1->i_data, ei2->i_data, sizeof(ei1->i_data));
-	tmp = ei1->i_flags & EXT4_FL_SHOULD_SWAP;
-	ei1->i_flags = (ei2->i_flags & EXT4_FL_SHOULD_SWAP) |
-		(ei1->i_flags & ~EXT4_FL_SHOULD_SWAP);
-	ei2->i_flags = tmp | (ei2->i_flags & ~EXT4_FL_SHOULD_SWAP);
+	tmp = ei1->i_flags & PXT4_FL_SHOULD_SWAP;
+	ei1->i_flags = (ei2->i_flags & PXT4_FL_SHOULD_SWAP) |
+		(ei1->i_flags & ~PXT4_FL_SHOULD_SWAP);
+	ei2->i_flags = tmp | (ei2->i_flags & ~PXT4_FL_SHOULD_SWAP);
 	swap(ei1->i_disksize, ei2->i_disksize);
 	pxt4_es_remove_extent(inode1, 0, EXT_MAX_BLOCKS);
 	pxt4_es_remove_extent(inode2, 0, EXT_MAX_BLOCKS);
@@ -88,8 +88,8 @@ static void swap_inode_data(struct inode *inode1, struct inode *inode2)
 
 static void reset_inode_seed(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	__le32 inum = cpu_to_le32(inode->i_ino);
 	__le32 gen = cpu_to_le32(inode->i_generation);
 	__u32 csum;
@@ -103,11 +103,11 @@ static void reset_inode_seed(struct inode *inode)
 
 /**
  * Swap the information from the given @inode and the inode
- * EXT4_BOOT_LOADER_INO. It will basically swap i_data and all other
+ * PXT4_BOOT_LOADER_INO. It will basically swap i_data and all other
  * important fields of the inodes.
  *
  * @sb:         the super block of the filesystem
- * @inode:      the inode to swap with EXT4_BOOT_LOADER_INO
+ * @inode:      the inode to swap with PXT4_BOOT_LOADER_INO
  *
  */
 static long swap_inode_boot_loader(struct super_block *sb,
@@ -121,10 +121,10 @@ static long swap_inode_boot_loader(struct super_block *sb,
 	blkcnt_t blocks;
 	unsigned short bytes;
 
-	inode_bl = pxt4_iget(sb, EXT4_BOOT_LOADER_INO, EXT4_IGET_SPECIAL);
+	inode_bl = pxt4_iget(sb, PXT4_BOOT_LOADER_INO, PXT4_IGET_SPECIAL);
 	if (IS_ERR(inode_bl))
 		return PTR_ERR(inode_bl);
-	ei_bl = EXT4_I(inode_bl);
+	ei_bl = PXT4_I(inode_bl);
 
 	/* Protect orig inodes against a truncate and make sure,
 	 * that only 1 swap_inode_boot_loader is running. */
@@ -132,7 +132,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 
 	if (inode->i_nlink != 1 || !S_ISREG(inode->i_mode) ||
 	    IS_SWAPFILE(inode) || IS_ENCRYPTED(inode) ||
-	    (EXT4_I(inode)->i_flags & EXT4_JOURNAL_DATA_FL) ||
+	    (PXT4_I(inode)->i_flags & PXT4_JOURNAL_DATA_FL) ||
 	    pxt4_has_inline_data(inode)) {
 		err = -EINVAL;
 		goto journal_err_out;
@@ -144,7 +144,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 		goto journal_err_out;
 	}
 
-	down_write(&EXT4_I(inode)->i_mmap_sem);
+	down_write(&PXT4_I(inode)->i_mmap_sem);
 	err = filemap_write_and_wait(inode->i_mapping);
 	if (err)
 		goto err_out;
@@ -160,7 +160,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 	truncate_inode_pages(&inode->i_data, 0);
 	truncate_inode_pages(&inode_bl->i_data, 0);
 
-	handle = pxt4_journal_start(inode_bl, EXT4_HT_MOVE_EXTENTS, 2);
+	handle = pxt4_journal_start(inode_bl, PXT4_HT_MOVE_EXTENTS, 2);
 	if (IS_ERR(handle)) {
 		err = -EINVAL;
 		goto err_out;
@@ -180,7 +180,7 @@ static long swap_inode_boot_loader(struct super_block *sb,
 		i_size_write(inode_bl, 0);
 		inode_bl->i_mode = S_IFREG;
 		if (pxt4_has_feature_extents(sb)) {
-			pxt4_set_inode_flag(inode_bl, EXT4_INODE_EXTENTS);
+			pxt4_set_inode_flag(inode_bl, PXT4_INODE_EXTENTS);
 			pxt4_ext_tree_init(handle, inode_bl);
 		} else
 			memset(ei_bl->i_data, 0, sizeof(ei_bl->i_data));
@@ -250,7 +250,7 @@ err_out1:
 	pxt4_double_up_write_data_sem(inode, inode_bl);
 
 err_out:
-	up_write(&EXT4_I(inode)->i_mmap_sem);
+	up_write(&PXT4_I(inode)->i_mmap_sem);
 journal_err_out:
 	unlock_two_nondirectories(inode, inode_bl);
 	iput(inode_bl);
@@ -277,13 +277,13 @@ static int uuid_is_zero(__u8 u[16])
 static int pxt4_ioctl_check_immutable(struct inode *inode, __u32 new_projid,
 				      unsigned int flags)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	unsigned int oldflags = ei->i_flags;
 
-	if (!(oldflags & EXT4_IMMUTABLE_FL) || !(flags & EXT4_IMMUTABLE_FL))
+	if (!(oldflags & PXT4_IMMUTABLE_FL) || !(flags & PXT4_IMMUTABLE_FL))
 		return 0;
 
-	if ((oldflags & ~EXT4_IMMUTABLE_FL) != (flags & ~EXT4_IMMUTABLE_FL))
+	if ((oldflags & ~PXT4_IMMUTABLE_FL) != (flags & ~PXT4_IMMUTABLE_FL))
 		return -EPERM;
 	if (pxt4_has_feature_project(inode->i_sb) &&
 	    __kprojid_val(ei->i_projid) != new_projid)
@@ -295,7 +295,7 @@ static int pxt4_ioctl_check_immutable(struct inode *inode, __u32 new_projid,
 static int pxt4_ioctl_setflags(struct inode *inode,
 			       unsigned int flags)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	handle_t *handle = NULL;
 	int err = -EPERM, migrate = 0;
 	struct pxt4_iloc iloc;
@@ -310,7 +310,7 @@ static int pxt4_ioctl_setflags(struct inode *inode,
 	oldflags = ei->i_flags;
 
 	/* The JOURNAL_DATA flag is modifiable only by root */
-	jflag = flags & EXT4_JOURNAL_DATA_FL;
+	jflag = flags & PXT4_JOURNAL_DATA_FL;
 
 	err = vfs_ioc_setflags_prepare(inode, oldflags, flags);
 	if (err)
@@ -320,26 +320,26 @@ static int pxt4_ioctl_setflags(struct inode *inode,
 	 * The JOURNAL_DATA flag can only be changed by
 	 * the relevant capability.
 	 */
-	if ((jflag ^ oldflags) & (EXT4_JOURNAL_DATA_FL)) {
+	if ((jflag ^ oldflags) & (PXT4_JOURNAL_DATA_FL)) {
 		if (!capable(CAP_SYS_RESOURCE))
 			goto flags_out;
 	}
-	if ((flags ^ oldflags) & EXT4_EXTENTS_FL)
+	if ((flags ^ oldflags) & PXT4_EXTENTS_FL)
 		migrate = 1;
 
-	if (flags & EXT4_EOFBLOCKS_FL) {
+	if (flags & PXT4_EOFBLOCKS_FL) {
 		/* we don't support adding EOFBLOCKS flag */
-		if (!(oldflags & EXT4_EOFBLOCKS_FL)) {
+		if (!(oldflags & PXT4_EOFBLOCKS_FL)) {
 			err = -EOPNOTSUPP;
 			goto flags_out;
 		}
-	} else if (oldflags & EXT4_EOFBLOCKS_FL) {
+	} else if (oldflags & PXT4_EOFBLOCKS_FL) {
 		err = pxt4_truncate(inode);
 		if (err)
 			goto flags_out;
 	}
 
-	if ((flags ^ oldflags) & EXT4_CASEFOLD_FL) {
+	if ((flags ^ oldflags) & PXT4_CASEFOLD_FL) {
 		if (!pxt4_has_feature_casefold(sb)) {
 			err = -EOPNOTSUPP;
 			goto flags_out;
@@ -363,14 +363,14 @@ static int pxt4_ioctl_setflags(struct inode *inode,
 	 * will come through the filesystem and fail.
 	 */
 	if (S_ISREG(inode->i_mode) && !IS_IMMUTABLE(inode) &&
-	    (flags & EXT4_IMMUTABLE_FL)) {
+	    (flags & PXT4_IMMUTABLE_FL)) {
 		inode_dio_wait(inode);
 		err = filemap_write_and_wait(inode->i_mapping);
 		if (err)
 			goto flags_out;
 	}
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 	if (IS_ERR(handle)) {
 		err = PTR_ERR(handle);
 		goto flags_out;
@@ -382,10 +382,10 @@ static int pxt4_ioctl_setflags(struct inode *inode,
 		goto flags_err;
 
 	for (i = 0, mask = 1; i < 32; i++, mask <<= 1) {
-		if (!(mask & EXT4_FL_USER_MODIFIABLE))
+		if (!(mask & PXT4_FL_USER_MODIFIABLE))
 			continue;
 		/* These flags get special treatment later */
-		if (mask == EXT4_JOURNAL_DATA_FL || mask == EXT4_EXTENTS_FL)
+		if (mask == PXT4_JOURNAL_DATA_FL || mask == PXT4_EXTENTS_FL)
 			continue;
 		if (mask & flags)
 			pxt4_set_inode_flag(inode, i);
@@ -402,7 +402,7 @@ flags_err:
 	if (err)
 		goto flags_out;
 
-	if ((jflag ^ oldflags) & (EXT4_JOURNAL_DATA_FL)) {
+	if ((jflag ^ oldflags) & (PXT4_JOURNAL_DATA_FL)) {
 		/*
 		 * Changes to the journaling mode can cause unsafe changes to
 		 * S_DAX if we are using the DAX mount option.
@@ -417,7 +417,7 @@ flags_err:
 			goto flags_out;
 	}
 	if (migrate) {
-		if (flags & EXT4_EXTENTS_FL)
+		if (flags & PXT4_EXTENTS_FL)
 			err = pxt4_ext_migrate(inode);
 		else
 			err = pxt4_ind_migrate(inode);
@@ -432,7 +432,7 @@ static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 {
 	struct inode *inode = file_inode(filp);
 	struct super_block *sb = inode->i_sb;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	int err, rc;
 	handle_t *handle;
 	kprojid_t kprojid;
@@ -441,18 +441,18 @@ static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 	struct dquot *transfer_to[MAXQUOTAS] = { };
 
 	if (!pxt4_has_feature_project(sb)) {
-		if (projid != EXT4_DEF_PROJID)
+		if (projid != PXT4_DEF_PROJID)
 			return -EOPNOTSUPP;
 		else
 			return 0;
 	}
 
-	if (EXT4_INODE_SIZE(sb) <= EXT4_GOOD_OLD_INODE_SIZE)
+	if (PXT4_INODE_SIZE(sb) <= PXT4_GOOD_OLD_INODE_SIZE)
 		return -EOPNOTSUPP;
 
 	kprojid = make_kprojid(&init_user_ns, (projid_t)projid);
 
-	if (projid_eq(kprojid, EXT4_I(inode)->i_projid))
+	if (projid_eq(kprojid, PXT4_I(inode)->i_projid))
 		return 0;
 
 	err = -EPERM;
@@ -465,9 +465,9 @@ static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 		return err;
 
 	raw_inode = pxt4_raw_inode(&iloc);
-	if (!EXT4_FITS_IN_INODE(raw_inode, ei, i_projid)) {
+	if (!PXT4_FITS_IN_INODE(raw_inode, ei, i_projid)) {
 		err = pxt4_expand_extra_isize(inode,
-					      EXT4_SB(sb)->s_want_extra_isize,
+					      PXT4_SB(sb)->s_want_extra_isize,
 					      &iloc);
 		if (err)
 			return err;
@@ -479,9 +479,9 @@ static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 	if (err)
 		return err;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_QUOTA,
-		EXT4_QUOTA_INIT_BLOCKS(sb) +
-		EXT4_QUOTA_DEL_BLOCKS(sb) + 3);
+	handle = pxt4_journal_start(inode, PXT4_HT_QUOTA,
+		PXT4_QUOTA_INIT_BLOCKS(sb) +
+		PXT4_QUOTA_DEL_BLOCKS(sb) + 3);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -495,15 +495,15 @@ static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 		/* __dquot_transfer() calls back pxt4_get_inode_usage() which
 		 * counts xattr inode references.
 		 */
-		down_read(&EXT4_I(inode)->xattr_sem);
+		down_read(&PXT4_I(inode)->xattr_sem);
 		err = __dquot_transfer(inode, transfer_to);
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		dqput(transfer_to[PRJQUOTA]);
 		if (err)
 			goto out_dirty;
 	}
 
-	EXT4_I(inode)->i_projid = kprojid;
+	PXT4_I(inode)->i_projid = kprojid;
 	inode->i_ctime = current_time(inode);
 out_dirty:
 	rc = pxt4_mark_iloc_dirty(handle, inode, &iloc);
@@ -516,7 +516,7 @@ out_stop:
 #else
 static int pxt4_ioctl_setproject(struct file *filp, __u32 projid)
 {
-	if (projid != EXT4_DEF_PROJID)
+	if (projid != PXT4_DEF_PROJID)
 		return -EOPNOTSUPP;
 	return 0;
 }
@@ -527,22 +527,22 @@ static inline __u32 pxt4_iflags_to_xflags(unsigned long iflags)
 {
 	__u32 xflags = 0;
 
-	if (iflags & EXT4_SYNC_FL)
+	if (iflags & PXT4_SYNC_FL)
 		xflags |= FS_XFLAG_SYNC;
-	if (iflags & EXT4_IMMUTABLE_FL)
+	if (iflags & PXT4_IMMUTABLE_FL)
 		xflags |= FS_XFLAG_IMMUTABLE;
-	if (iflags & EXT4_APPEND_FL)
+	if (iflags & PXT4_APPEND_FL)
 		xflags |= FS_XFLAG_APPEND;
-	if (iflags & EXT4_NODUMP_FL)
+	if (iflags & PXT4_NODUMP_FL)
 		xflags |= FS_XFLAG_NODUMP;
-	if (iflags & EXT4_NOATIME_FL)
+	if (iflags & PXT4_NOATIME_FL)
 		xflags |= FS_XFLAG_NOATIME;
-	if (iflags & EXT4_PROJINHERIT_FL)
+	if (iflags & PXT4_PROJINHERIT_FL)
 		xflags |= FS_XFLAG_PROJINHERIT;
 	return xflags;
 }
 
-#define EXT4_SUPPORTED_FS_XFLAGS (FS_XFLAG_SYNC | FS_XFLAG_IMMUTABLE | \
+#define PXT4_SUPPORTED_FS_XFLAGS (FS_XFLAG_SYNC | FS_XFLAG_IMMUTABLE | \
 				  FS_XFLAG_APPEND | FS_XFLAG_NODUMP | \
 				  FS_XFLAG_NOATIME | FS_XFLAG_PROJINHERIT)
 
@@ -552,24 +552,24 @@ static inline unsigned long pxt4_xflags_to_iflags(__u32 xflags)
 	unsigned long iflags = 0;
 
 	if (xflags & FS_XFLAG_SYNC)
-		iflags |= EXT4_SYNC_FL;
+		iflags |= PXT4_SYNC_FL;
 	if (xflags & FS_XFLAG_IMMUTABLE)
-		iflags |= EXT4_IMMUTABLE_FL;
+		iflags |= PXT4_IMMUTABLE_FL;
 	if (xflags & FS_XFLAG_APPEND)
-		iflags |= EXT4_APPEND_FL;
+		iflags |= PXT4_APPEND_FL;
 	if (xflags & FS_XFLAG_NODUMP)
-		iflags |= EXT4_NODUMP_FL;
+		iflags |= PXT4_NODUMP_FL;
 	if (xflags & FS_XFLAG_NOATIME)
-		iflags |= EXT4_NOATIME_FL;
+		iflags |= PXT4_NOATIME_FL;
 	if (xflags & FS_XFLAG_PROJINHERIT)
-		iflags |= EXT4_PROJINHERIT_FL;
+		iflags |= PXT4_PROJINHERIT_FL;
 
 	return iflags;
 }
 
 static int pxt4_shutdown(struct super_block *sb, unsigned long arg)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	__u32 flags;
 
 	if (!capable(CAP_SYS_ADMIN))
@@ -578,7 +578,7 @@ static int pxt4_shutdown(struct super_block *sb, unsigned long arg)
 	if (get_user(flags, (__u32 __user *)arg))
 		return -EFAULT;
 
-	if (flags > EXT4_GOING_FLAGS_NOLOGFLUSH)
+	if (flags > PXT4_GOING_FLAGS_NOLOGFLUSH)
 		return -EINVAL;
 
 	if (pxt4_forced_shutdown(sbi))
@@ -588,20 +588,20 @@ static int pxt4_shutdown(struct super_block *sb, unsigned long arg)
 	trace_pxt4_shutdown(sb, flags);
 
 	switch (flags) {
-	case EXT4_GOING_FLAGS_DEFAULT:
+	case PXT4_GOING_FLAGS_DEFAULT:
 		freeze_bdev(sb->s_bdev);
-		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
+		set_bit(PXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
 		thaw_bdev(sb->s_bdev, sb);
 		break;
-	case EXT4_GOING_FLAGS_LOGFLUSH:
-		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
+	case PXT4_GOING_FLAGS_LOGFLUSH:
+		set_bit(PXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
 		if (sbi->s_journal && !is_journal_aborted(sbi->s_journal)) {
 			(void) pxt4_force_commit(sb);
 			jbd3_journal_abort(sbi->s_journal, -ESHUTDOWN);
 		}
 		break;
-	case EXT4_GOING_FLAGS_NOLOGFLUSH:
-		set_bit(EXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
+	case PXT4_GOING_FLAGS_NOLOGFLUSH:
+		set_bit(PXT4_FLAGS_SHUTDOWN, &sbi->s_pxt4_flags);
 		if (sbi->s_journal && !is_journal_aborted(sbi->s_journal))
 			jbd3_journal_abort(sbi->s_journal, -ESHUTDOWN);
 		break;
@@ -672,7 +672,7 @@ static int pxt4_ioc_getfsmap(struct super_block *sb,
 	info.gi_sb = sb;
 	info.gi_data = arg;
 	error = pxt4_getfsmap(sb, &xhead, pxt4_getfsmap_format, &info);
-	if (error == EXT4_QUERY_RANGE_ABORT) {
+	if (error == PXT4_QUERY_RANGE_ABORT) {
 		error = 0;
 		aborted = true;
 	} else if (error)
@@ -718,10 +718,10 @@ static long pxt4_ioctl_group_add(struct file *file,
 		goto group_add_out;
 
 	err = pxt4_group_add(sb, input);
-	if (EXT4_SB(sb)->s_journal) {
-		jbd3_journal_lock_updates(EXT4_SB(sb)->s_journal);
-		err2 = jbd3_journal_flush(EXT4_SB(sb)->s_journal);
-		jbd3_journal_unlock_updates(EXT4_SB(sb)->s_journal);
+	if (PXT4_SB(sb)->s_journal) {
+		jbd3_journal_lock_updates(PXT4_SB(sb)->s_journal);
+		err2 = jbd3_journal_flush(PXT4_SB(sb)->s_journal);
+		jbd3_journal_unlock_updates(PXT4_SB(sb)->s_journal);
 	}
 	if (err == 0)
 		err = err2;
@@ -736,10 +736,10 @@ group_add_out:
 
 static void pxt4_fill_fsxattr(struct inode *inode, struct fsxattr *fa)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
 	simple_fill_fsxattr(fa, pxt4_iflags_to_xflags(ei->i_flags &
-						      EXT4_FL_USER_VISIBLE));
+						      PXT4_FL_USER_VISIBLE));
 
 	if (pxt4_has_feature_project(inode->i_sb))
 		fa->fsx_projid = from_kprojid(&init_user_ns, ei->i_projid);
@@ -817,7 +817,7 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct inode *inode = file_inode(filp);
 	struct super_block *sb = inode->i_sb;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	unsigned int flags;
 
 	pxt4_debug("cmd = %u, arg = %lu\n", cmd, arg);
@@ -825,12 +825,12 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case FS_IOC_GETFSMAP:
 		return pxt4_ioc_getfsmap(sb, (void __user *)arg);
-	case EXT4_IOC_GETFLAGS:
-		flags = ei->i_flags & EXT4_FL_USER_VISIBLE;
+	case PXT4_IOC_GETFLAGS:
+		flags = ei->i_flags & PXT4_FL_USER_VISIBLE;
 		if (S_ISREG(inode->i_mode))
-			flags &= ~EXT4_PROJINHERIT_FL;
+			flags &= ~PXT4_PROJINHERIT_FL;
 		return put_user(flags, (int __user *) arg);
-	case EXT4_IOC_SETFLAGS: {
+	case PXT4_IOC_SETFLAGS: {
 		int err;
 
 		if (!inode_owner_or_capable(inode))
@@ -839,7 +839,7 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (get_user(flags, (int __user *) arg))
 			return -EFAULT;
 
-		if (flags & ~EXT4_FL_USER_VISIBLE)
+		if (flags & ~PXT4_FL_USER_VISIBLE)
 			return -EOPNOTSUPP;
 		/*
 		 * chattr(1) grabs flags via GETFLAGS, modifies the result and
@@ -847,7 +847,7 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		 * more restrictive than just silently masking off visible but
 		 * not settable flags as we always did.
 		 */
-		flags &= EXT4_FL_USER_MODIFIABLE;
+		flags &= PXT4_FL_USER_MODIFIABLE;
 		if (pxt4_mask_flags(inode->i_mode, flags) != flags)
 			return -EOPNOTSUPP;
 
@@ -865,11 +865,11 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		mnt_drop_write_file(filp);
 		return err;
 	}
-	case EXT4_IOC_GETVERSION:
-	case EXT4_IOC_GETVERSION_OLD:
+	case PXT4_IOC_GETVERSION:
+	case PXT4_IOC_GETVERSION_OLD:
 		return put_user(inode->i_generation, (int __user *) arg);
-	case EXT4_IOC_SETVERSION:
-	case EXT4_IOC_SETVERSION_OLD: {
+	case PXT4_IOC_SETVERSION:
+	case PXT4_IOC_SETVERSION_OLD: {
 		handle_t *handle;
 		struct pxt4_iloc iloc;
 		__u32 generation;
@@ -893,7 +893,7 @@ long pxt4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 
 		inode_lock(inode);
-		handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+		handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 		if (IS_ERR(handle)) {
 			err = PTR_ERR(handle);
 			goto unlock_out;
@@ -912,7 +912,7 @@ setversion_out:
 		mnt_drop_write_file(filp);
 		return err;
 	}
-	case EXT4_IOC_GROUP_EXTEND: {
+	case PXT4_IOC_GROUP_EXTEND: {
 		pxt4_fsblk_t n_blocks_count;
 		int err, err2=0;
 
@@ -936,11 +936,11 @@ setversion_out:
 		if (err)
 			goto group_extend_out;
 
-		err = pxt4_group_extend(sb, EXT4_SB(sb)->s_es, n_blocks_count);
-		if (EXT4_SB(sb)->s_journal) {
-			jbd3_journal_lock_updates(EXT4_SB(sb)->s_journal);
-			err2 = jbd3_journal_flush(EXT4_SB(sb)->s_journal);
-			jbd3_journal_unlock_updates(EXT4_SB(sb)->s_journal);
+		err = pxt4_group_extend(sb, PXT4_SB(sb)->s_es, n_blocks_count);
+		if (PXT4_SB(sb)->s_journal) {
+			jbd3_journal_lock_updates(PXT4_SB(sb)->s_journal);
+			err2 = jbd3_journal_flush(PXT4_SB(sb)->s_journal);
+			jbd3_journal_unlock_updates(PXT4_SB(sb)->s_journal);
 		}
 		if (err == 0)
 			err = err2;
@@ -950,7 +950,7 @@ group_extend_out:
 		return err;
 	}
 
-	case EXT4_IOC_MOVE_EXT: {
+	case PXT4_IOC_MOVE_EXT: {
 		struct move_extent me;
 		struct fd donor;
 		int err;
@@ -1001,7 +1001,7 @@ mext_out:
 		return err;
 	}
 
-	case EXT4_IOC_GROUP_ADD: {
+	case PXT4_IOC_GROUP_ADD: {
 		struct pxt4_new_group_data input;
 
 		if (copy_from_user(&input, (struct pxt4_new_group_input __user *)arg,
@@ -1011,7 +1011,7 @@ mext_out:
 		return pxt4_ioctl_group_add(filp, &input);
 	}
 
-	case EXT4_IOC_MIGRATE:
+	case PXT4_IOC_MIGRATE:
 	{
 		int err;
 		if (!inode_owner_or_capable(inode))
@@ -1033,7 +1033,7 @@ mext_out:
 		return err;
 	}
 
-	case EXT4_IOC_ALLOC_DA_BLKS:
+	case PXT4_IOC_ALLOC_DA_BLKS:
 	{
 		int err;
 		if (!inode_owner_or_capable(inode))
@@ -1047,7 +1047,7 @@ mext_out:
 		return err;
 	}
 
-	case EXT4_IOC_SWAP_BOOT:
+	case PXT4_IOC_SWAP_BOOT:
 	{
 		int err;
 		if (!(filp->f_mode & FMODE_WRITE))
@@ -1060,10 +1060,10 @@ mext_out:
 		return err;
 	}
 
-	case EXT4_IOC_RESIZE_FS: {
+	case PXT4_IOC_RESIZE_FS: {
 		pxt4_fsblk_t n_blocks_count;
 		int err = 0, err2 = 0;
-		pxt4_group_t o_group = EXT4_SB(sb)->s_groups_count;
+		pxt4_group_t o_group = PXT4_SB(sb)->s_groups_count;
 
 		if (copy_from_user(&n_blocks_count, (__u64 __user *)arg,
 				   sizeof(__u64))) {
@@ -1079,15 +1079,15 @@ mext_out:
 			goto resizefs_out;
 
 		err = pxt4_resize_fs(sb, n_blocks_count);
-		if (EXT4_SB(sb)->s_journal) {
-			jbd3_journal_lock_updates(EXT4_SB(sb)->s_journal);
-			err2 = jbd3_journal_flush(EXT4_SB(sb)->s_journal);
-			jbd3_journal_unlock_updates(EXT4_SB(sb)->s_journal);
+		if (PXT4_SB(sb)->s_journal) {
+			jbd3_journal_lock_updates(PXT4_SB(sb)->s_journal);
+			err2 = jbd3_journal_flush(PXT4_SB(sb)->s_journal);
+			jbd3_journal_unlock_updates(PXT4_SB(sb)->s_journal);
 		}
 		if (err == 0)
 			err = err2;
 		mnt_drop_write_file(filp);
-		if (!err && (o_group < EXT4_SB(sb)->s_groups_count) &&
+		if (!err && (o_group < PXT4_SB(sb)->s_groups_count) &&
 		    pxt4_has_group_desc_csum(sb) &&
 		    test_opt(sb, INIT_INODE_TABLE))
 			err = pxt4_register_li_request(sb, o_group);
@@ -1130,18 +1130,18 @@ resizefs_out:
 
 		return 0;
 	}
-	case EXT4_IOC_PRECACHE_EXTENTS:
+	case PXT4_IOC_PRECACHE_EXTENTS:
 		return pxt4_ext_precache(inode);
 
-	case EXT4_IOC_SET_ENCRYPTION_POLICY:
+	case PXT4_IOC_SET_ENCRYPTION_POLICY:
 		if (!pxt4_has_feature_encrypt(sb))
 			return -EOPNOTSUPP;
 		return fscrypt_ioctl_set_policy(filp, (const void __user *)arg);
 
-	case EXT4_IOC_GET_ENCRYPTION_PWSALT: {
+	case PXT4_IOC_GET_ENCRYPTION_PWSALT: {
 #ifdef CONFIG_FS_ENCRYPTION
 		int err, err2;
-		struct pxt4_sb_info *sbi = EXT4_SB(sb);
+		struct pxt4_sb_info *sbi = PXT4_SB(sb);
 		handle_t *handle;
 
 		if (!pxt4_has_feature_encrypt(sb))
@@ -1150,7 +1150,7 @@ resizefs_out:
 			err = mnt_want_write_file(filp);
 			if (err)
 				return err;
-			handle = pxt4_journal_start_sb(sb, EXT4_HT_MISC, 1);
+			handle = pxt4_journal_start_sb(sb, PXT4_HT_MISC, 1);
 			if (IS_ERR(handle)) {
 				err = PTR_ERR(handle);
 				goto pwsalt_err_exit;
@@ -1181,7 +1181,7 @@ resizefs_out:
 		return -EOPNOTSUPP;
 #endif
 	}
-	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+	case PXT4_IOC_GET_ENCRYPTION_POLICY:
 		if (!pxt4_has_feature_encrypt(sb))
 			return -EOPNOTSUPP;
 		return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
@@ -1211,7 +1211,7 @@ resizefs_out:
 			return -EOPNOTSUPP;
 		return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
 
-	case EXT4_IOC_CLEAR_ES_CACHE:
+	case PXT4_IOC_CLEAR_ES_CACHE:
 	{
 		if (!inode_owner_or_capable(inode))
 			return -EACCES;
@@ -1219,26 +1219,26 @@ resizefs_out:
 		return 0;
 	}
 
-	case EXT4_IOC_GETSTATE:
+	case PXT4_IOC_GETSTATE:
 	{
 		__u32	state = 0;
 
-		if (pxt4_test_inode_state(inode, EXT4_STATE_EXT_PRECACHED))
-			state |= EXT4_STATE_FLAG_EXT_PRECACHED;
-		if (pxt4_test_inode_state(inode, EXT4_STATE_NEW))
-			state |= EXT4_STATE_FLAG_NEW;
-		if (pxt4_test_inode_state(inode, EXT4_STATE_NEWENTRY))
-			state |= EXT4_STATE_FLAG_NEWENTRY;
-		if (pxt4_test_inode_state(inode, EXT4_STATE_DA_ALLOC_CLOSE))
-			state |= EXT4_STATE_FLAG_DA_ALLOC_CLOSE;
+		if (pxt4_test_inode_state(inode, PXT4_STATE_EXT_PRECACHED))
+			state |= PXT4_STATE_FLAG_EXT_PRECACHED;
+		if (pxt4_test_inode_state(inode, PXT4_STATE_NEW))
+			state |= PXT4_STATE_FLAG_NEW;
+		if (pxt4_test_inode_state(inode, PXT4_STATE_NEWENTRY))
+			state |= PXT4_STATE_FLAG_NEWENTRY;
+		if (pxt4_test_inode_state(inode, PXT4_STATE_DA_ALLOC_CLOSE))
+			state |= PXT4_STATE_FLAG_DA_ALLOC_CLOSE;
 
 		return put_user(state, (__u32 __user *) arg);
 	}
 
-	case EXT4_IOC_GET_ES_CACHE:
+	case PXT4_IOC_GET_ES_CACHE:
 		return pxt4_ioctl_get_es_cache(filp, arg);
 
-	case EXT4_IOC_FSGETXATTR:
+	case PXT4_IOC_FSGETXATTR:
 	{
 		struct fsxattr fa;
 
@@ -1249,7 +1249,7 @@ resizefs_out:
 			return -EFAULT;
 		return 0;
 	}
-	case EXT4_IOC_FSSETXATTR:
+	case PXT4_IOC_FSSETXATTR:
 	{
 		struct fsxattr fa, old_fa;
 		int err;
@@ -1262,7 +1262,7 @@ resizefs_out:
 		if (!inode_owner_or_capable(inode))
 			return -EACCES;
 
-		if (fa.fsx_xflags & ~EXT4_SUPPORTED_FS_XFLAGS)
+		if (fa.fsx_xflags & ~PXT4_SUPPORTED_FS_XFLAGS)
 			return -EOPNOTSUPP;
 
 		flags = pxt4_xflags_to_iflags(fa.fsx_xflags);
@@ -1278,8 +1278,8 @@ resizefs_out:
 		err = vfs_ioc_fssetxattr_check(inode, &old_fa, &fa);
 		if (err)
 			goto out;
-		flags = (ei->i_flags & ~EXT4_FL_XFLAG_VISIBLE) |
-			 (flags & EXT4_FL_XFLAG_VISIBLE);
+		flags = (ei->i_flags & ~PXT4_FL_XFLAG_VISIBLE) |
+			 (flags & PXT4_FL_XFLAG_VISIBLE);
 		err = pxt4_ioctl_check_immutable(inode, fa.fsx_projid, flags);
 		if (err)
 			goto out;
@@ -1292,7 +1292,7 @@ out:
 		mnt_drop_write_file(filp);
 		return err;
 	}
-	case EXT4_IOC_SHUTDOWN:
+	case PXT4_IOC_SHUTDOWN:
 		return pxt4_shutdown(sb, arg);
 
 	case FS_IOC_ENABLE_VERITY:
@@ -1315,34 +1315,34 @@ long pxt4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	/* These are just misnamed, they actually get/put from/to user an int */
 	switch (cmd) {
-	case EXT4_IOC32_GETFLAGS:
-		cmd = EXT4_IOC_GETFLAGS;
+	case PXT4_IOC32_GETFLAGS:
+		cmd = PXT4_IOC_GETFLAGS;
 		break;
-	case EXT4_IOC32_SETFLAGS:
-		cmd = EXT4_IOC_SETFLAGS;
+	case PXT4_IOC32_SETFLAGS:
+		cmd = PXT4_IOC_SETFLAGS;
 		break;
-	case EXT4_IOC32_GETVERSION:
-		cmd = EXT4_IOC_GETVERSION;
+	case PXT4_IOC32_GETVERSION:
+		cmd = PXT4_IOC_GETVERSION;
 		break;
-	case EXT4_IOC32_SETVERSION:
-		cmd = EXT4_IOC_SETVERSION;
+	case PXT4_IOC32_SETVERSION:
+		cmd = PXT4_IOC_SETVERSION;
 		break;
-	case EXT4_IOC32_GROUP_EXTEND:
-		cmd = EXT4_IOC_GROUP_EXTEND;
+	case PXT4_IOC32_GROUP_EXTEND:
+		cmd = PXT4_IOC_GROUP_EXTEND;
 		break;
-	case EXT4_IOC32_GETVERSION_OLD:
-		cmd = EXT4_IOC_GETVERSION_OLD;
+	case PXT4_IOC32_GETVERSION_OLD:
+		cmd = PXT4_IOC_GETVERSION_OLD;
 		break;
-	case EXT4_IOC32_SETVERSION_OLD:
-		cmd = EXT4_IOC_SETVERSION_OLD;
+	case PXT4_IOC32_SETVERSION_OLD:
+		cmd = PXT4_IOC_SETVERSION_OLD;
 		break;
-	case EXT4_IOC32_GETRSVSZ:
-		cmd = EXT4_IOC_GETRSVSZ;
+	case PXT4_IOC32_GETRSVSZ:
+		cmd = PXT4_IOC_GETRSVSZ;
 		break;
-	case EXT4_IOC32_SETRSVSZ:
-		cmd = EXT4_IOC_SETRSVSZ;
+	case PXT4_IOC32_SETRSVSZ:
+		cmd = PXT4_IOC_SETRSVSZ;
 		break;
-	case EXT4_IOC32_GROUP_ADD: {
+	case PXT4_IOC32_GROUP_ADD: {
 		struct compat_pxt4_new_group_input __user *uinput;
 		struct pxt4_new_group_data input;
 		int err;
@@ -1359,24 +1359,24 @@ long pxt4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		return pxt4_ioctl_group_add(file, &input);
 	}
-	case EXT4_IOC_MOVE_EXT:
-	case EXT4_IOC_RESIZE_FS:
-	case EXT4_IOC_PRECACHE_EXTENTS:
-	case EXT4_IOC_SET_ENCRYPTION_POLICY:
-	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
-	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+	case PXT4_IOC_MOVE_EXT:
+	case PXT4_IOC_RESIZE_FS:
+	case PXT4_IOC_PRECACHE_EXTENTS:
+	case PXT4_IOC_SET_ENCRYPTION_POLICY:
+	case PXT4_IOC_GET_ENCRYPTION_PWSALT:
+	case PXT4_IOC_GET_ENCRYPTION_POLICY:
 	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
 	case FS_IOC_ADD_ENCRYPTION_KEY:
 	case FS_IOC_REMOVE_ENCRYPTION_KEY:
 	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
 	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-	case EXT4_IOC_SHUTDOWN:
+	case PXT4_IOC_SHUTDOWN:
 	case FS_IOC_GETFSMAP:
 	case FS_IOC_ENABLE_VERITY:
 	case FS_IOC_MEASURE_VERITY:
-	case EXT4_IOC_CLEAR_ES_CACHE:
-	case EXT4_IOC_GETSTATE:
-	case EXT4_IOC_GET_ES_CACHE:
+	case PXT4_IOC_CLEAR_ES_CACHE:
+	case PXT4_IOC_GETSTATE:
+	case PXT4_IOC_GET_ES_CACHE:
 		break;
 	default:
 		return -ENOIOCTLCMD;

@@ -134,7 +134,7 @@ static int pxt4_begin_enable_verity(struct file *filp)
 	if (err)
 		return err;
 
-	if (!pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
+	if (!pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)) {
 		pxt4_warning_inode(inode,
 				   "verity is only allowed on extent-based files");
 		return -EOPNOTSUPP;
@@ -148,13 +148,13 @@ static int pxt4_begin_enable_verity(struct file *filp)
 	if (err)
 		return err;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, credits);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
 	err = pxt4_orphan_add(handle, inode);
 	if (err == 0)
-		pxt4_set_inode_state(inode, EXT4_STATE_VERITY_IN_PROGRESS);
+		pxt4_set_inode_state(inode, PXT4_STATE_VERITY_IN_PROGRESS);
 
 	pxt4_journal_stop(handle);
 	return err;
@@ -216,7 +216,7 @@ static int pxt4_end_enable_verity(struct file *filp, const void *desc,
 
 	/*
 	 * Write all pages (both data and verity metadata).  Note that this must
-	 * happen before clearing EXT4_STATE_VERITY_IN_PROGRESS; otherwise pages
+	 * happen before clearing PXT4_STATE_VERITY_IN_PROGRESS; otherwise pages
 	 * beyond i_size won't be written properly.  For crash consistency, this
 	 * also must happen before the verity inode flag gets persisted.
 	 */
@@ -229,7 +229,7 @@ static int pxt4_end_enable_verity(struct file *filp, const void *desc,
 	 * orphan list (in a single transaction).
 	 */
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, credits);
 	if (IS_ERR(handle)) {
 		err = PTR_ERR(handle);
 		goto cleanup;
@@ -243,7 +243,7 @@ static int pxt4_end_enable_verity(struct file *filp, const void *desc,
 	if (err)
 		goto stop_and_cleanup;
 
-	pxt4_set_inode_flag(inode, EXT4_INODE_VERITY);
+	pxt4_set_inode_flag(inode, PXT4_INODE_VERITY);
 	pxt4_set_inode_flags(inode);
 	err = pxt4_mark_iloc_dirty(handle, inode, &iloc);
 	if (err)
@@ -251,7 +251,7 @@ static int pxt4_end_enable_verity(struct file *filp, const void *desc,
 
 	pxt4_journal_stop(handle);
 
-	pxt4_clear_inode_state(inode, EXT4_STATE_VERITY_IN_PROGRESS);
+	pxt4_clear_inode_state(inode, PXT4_STATE_VERITY_IN_PROGRESS);
 	return 0;
 
 stop_and_cleanup:
@@ -261,12 +261,12 @@ cleanup:
 	 * Verity failed to be enabled, so clean up by truncating any verity
 	 * metadata that was written beyond i_size (both from cache and from
 	 * disk), removing the inode from the orphan list (if it wasn't done
-	 * already), and clearing EXT4_STATE_VERITY_IN_PROGRESS.
+	 * already), and clearing PXT4_STATE_VERITY_IN_PROGRESS.
 	 */
 	truncate_inode_pages(inode->i_mapping, inode->i_size);
 	pxt4_truncate(inode);
 	pxt4_orphan_del(NULL, inode);
-	pxt4_clear_inode_state(inode, EXT4_STATE_VERITY_IN_PROGRESS);
+	pxt4_clear_inode_state(inode, PXT4_STATE_VERITY_IN_PROGRESS);
 	return err;
 }
 
@@ -288,8 +288,8 @@ static int pxt4_get_verity_descriptor_location(struct inode *inode,
 	 * See pxt4_write_verity_descriptor().
 	 */
 
-	if (!pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
-		EXT4_ERROR_INODE(inode, "verity file doesn't use extents");
+	if (!pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)) {
+		PXT4_ERROR_INODE(inode, "verity file doesn't use extents");
 		return -EFSCORRUPTED;
 	}
 
@@ -299,7 +299,7 @@ static int pxt4_get_verity_descriptor_location(struct inode *inode,
 
 	last_extent = path[path->p_depth].p_ext;
 	if (!last_extent) {
-		EXT4_ERROR_INODE(inode, "verity file has no extents");
+		PXT4_ERROR_INODE(inode, "verity file has no extents");
 		pxt4_ext_drop_refs(path);
 		kfree(path);
 		return -EFSCORRUPTED;
@@ -338,7 +338,7 @@ static int pxt4_get_verity_descriptor_location(struct inode *inode,
 	return 0;
 
 bad:
-	EXT4_ERROR_INODE(inode, "verity file corrupted; can't find descriptor");
+	PXT4_ERROR_INODE(inode, "verity file corrupted; can't find descriptor");
 	return -EFSCORRUPTED;
 }
 

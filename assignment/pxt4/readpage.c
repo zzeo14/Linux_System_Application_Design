@@ -276,7 +276,7 @@ int pxt4_mpage_readpages(struct address_space *mapping,
 		/*
 		 * Map blocks using the previous result first.
 		 */
-		if ((map.m_flags & EXT4_MAP_MAPPED) &&
+		if ((map.m_flags & PXT4_MAP_MAPPED) &&
 		    block_in_file > map.m_lblk &&
 		    block_in_file < (map.m_lblk + map.m_len)) {
 			unsigned map_offset = block_in_file - map.m_lblk;
@@ -285,7 +285,7 @@ int pxt4_mpage_readpages(struct address_space *mapping,
 			for (relative_block = 0; ; relative_block++) {
 				if (relative_block == last) {
 					/* needed? */
-					map.m_flags &= ~EXT4_MAP_MAPPED;
+					map.m_flags &= ~PXT4_MAP_MAPPED;
 					break;
 				}
 				if (page_block == blocks_per_page)
@@ -315,7 +315,7 @@ int pxt4_mpage_readpages(struct address_space *mapping,
 					goto next_page;
 				}
 			}
-			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
+			if ((map.m_flags & PXT4_MAP_MAPPED) == 0) {
 				fully_mapped = 0;
 				if (first_hole == blocks_per_page)
 					first_hole = page_block;
@@ -332,7 +332,7 @@ int pxt4_mpage_readpages(struct address_space *mapping,
 			for (relative_block = 0; ; relative_block++) {
 				if (relative_block == map.m_len) {
 					/* needed? */
-					map.m_flags &= ~EXT4_MAP_MAPPED;
+					map.m_flags &= ~PXT4_MAP_MAPPED;
 					break;
 				} else if (page_block == blocks_per_page)
 					break;
@@ -395,7 +395,7 @@ int pxt4_mpage_readpages(struct address_space *mapping,
 		if (bio_add_page(bio, page, length, 0) < length)
 			goto submit_and_realloc;
 
-		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
+		if (((map.m_flags & PXT4_MAP_BOUNDARY) &&
 		     (relative_block == map.m_len)) ||
 		    (first_hole != blocks_per_page)) {
 			submit_bio(bio);

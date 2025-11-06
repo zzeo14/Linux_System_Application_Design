@@ -7,7 +7,7 @@
 
 #include <linux/posix_acl_xattr.h>
 
-#define EXT4_ACL_VERSION	0x0001
+#define PXT4_ACL_VERSION	0x0001
 
 typedef struct {
 	__le16		e_tag;

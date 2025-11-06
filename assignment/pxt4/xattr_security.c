@@ -17,7 +17,7 @@ pxt4_xattr_security_get(const struct xattr_handler *handler,
 			struct dentry *unused, struct inode *inode,
 			const char *name, void *buffer, size_t size)
 {
-	return pxt4_xattr_get(inode, EXT4_XATTR_INDEX_SECURITY,
+	return pxt4_xattr_get(inode, PXT4_XATTR_INDEX_SECURITY,
 			      name, buffer, size);
 }
 
@@ -27,7 +27,7 @@ pxt4_xattr_security_set(const struct xattr_handler *handler,
 			const char *name, const void *value,
 			size_t size, int flags)
 {
-	return pxt4_xattr_set(inode, EXT4_XATTR_INDEX_SECURITY,
+	return pxt4_xattr_set(inode, PXT4_XATTR_INDEX_SECURITY,
 			      name, value, size, flags);
 }
 
@@ -41,7 +41,7 @@ pxt4_initxattrs(struct inode *inode, const struct xattr *xattr_array,
 
 	for (xattr = xattr_array; xattr->name != NULL; xattr++) {
 		err = pxt4_xattr_set_handle(handle, inode,
-					    EXT4_XATTR_INDEX_SECURITY,
+					    PXT4_XATTR_INDEX_SECURITY,
 					    xattr->name, xattr->value,
 					    xattr->value_len, XATTR_CREATE);
 		if (err < 0)

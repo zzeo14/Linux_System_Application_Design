@@ -26,7 +26,7 @@ pxt4_acl_from_disk(const void *value, size_t size)
 	if (size < sizeof(pxt4_acl_header))
 		 return ERR_PTR(-EINVAL);
 	if (((pxt4_acl_header *)value)->a_version !=
-	    cpu_to_le32(EXT4_ACL_VERSION))
+	    cpu_to_le32(PXT4_ACL_VERSION))
 		return ERR_PTR(-EINVAL);
 	value = (char *)value + sizeof(pxt4_acl_header);
 	count = pxt4_acl_count(size);
@@ -99,7 +99,7 @@ pxt4_acl_to_disk(const struct posix_acl *acl, size_t *size)
 			sizeof(pxt4_acl_entry), GFP_NOFS);
 	if (!ext_acl)
 		return ERR_PTR(-ENOMEM);
-	ext_acl->a_version = cpu_to_le32(EXT4_ACL_VERSION);
+	ext_acl->a_version = cpu_to_le32(PXT4_ACL_VERSION);
 	e = (char *)ext_acl + sizeof(pxt4_acl_header);
 	for (n = 0; n < acl->a_count; n++) {
 		const struct posix_acl_entry *acl_e = &acl->a_entries[n];
@@ -151,10 +151,10 @@ pxt4_get_acl(struct inode *inode, int type)
 
 	switch (type) {
 	case ACL_TYPE_ACCESS:
-		name_index = EXT4_XATTR_INDEX_POSIX_ACL_ACCESS;
+		name_index = PXT4_XATTR_INDEX_POSIX_ACL_ACCESS;
 		break;
 	case ACL_TYPE_DEFAULT:
-		name_index = EXT4_XATTR_INDEX_POSIX_ACL_DEFAULT;
+		name_index = PXT4_XATTR_INDEX_POSIX_ACL_DEFAULT;
 		break;
 	default:
 		BUG();
@@ -193,11 +193,11 @@ __pxt4_set_acl(handle_t *handle, struct inode *inode, int type,
 
 	switch (type) {
 	case ACL_TYPE_ACCESS:
-		name_index = EXT4_XATTR_INDEX_POSIX_ACL_ACCESS;
+		name_index = PXT4_XATTR_INDEX_POSIX_ACL_ACCESS;
 		break;
 
 	case ACL_TYPE_DEFAULT:
-		name_index = EXT4_XATTR_INDEX_POSIX_ACL_DEFAULT;
+		name_index = PXT4_XATTR_INDEX_POSIX_ACL_DEFAULT;
 		if (!S_ISDIR(inode->i_mode))
 			return acl ? -EACCES : 0;
 		break;
@@ -240,7 +240,7 @@ retry:
 	if (error)
 		return error;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_XATTR, credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_XATTR, credits);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 

@@ -22,14 +22,14 @@ int pxt4_inode_bitmap_csum_verify(struct super_block *sb, pxt4_group_t group,
 {
 	__u32 hi;
 	__u32 provided, calculated;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	if (!pxt4_has_metadata_csum(sb))
 		return 1;
 
 	provided = le16_to_cpu(gdp->bg_inode_bitmap_csum_lo);
 	calculated = pxt4_chksum(sbi, sbi->s_csum_seed, (__u8 *)bh->b_data, sz);
-	if (sbi->s_desc_size >= EXT4_BG_INODE_BITMAP_CSUM_HI_END) {
+	if (sbi->s_desc_size >= PXT4_BG_INODE_BITMAP_CSUM_HI_END) {
 		hi = le16_to_cpu(gdp->bg_inode_bitmap_csum_hi);
 		provided |= (hi << 16);
 	} else
@@ -43,14 +43,14 @@ void pxt4_inode_bitmap_csum_set(struct super_block *sb, pxt4_group_t group,
 				struct buffer_head *bh, int sz)
 {
 	__u32 csum;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	if (!pxt4_has_metadata_csum(sb))
 		return;
 
 	csum = pxt4_chksum(sbi, sbi->s_csum_seed, (__u8 *)bh->b_data, sz);
 	gdp->bg_inode_bitmap_csum_lo = cpu_to_le16(csum & 0xFFFF);
-	if (sbi->s_desc_size >= EXT4_BG_INODE_BITMAP_CSUM_HI_END)
+	if (sbi->s_desc_size >= PXT4_BG_INODE_BITMAP_CSUM_HI_END)
 		gdp->bg_inode_bitmap_csum_hi = cpu_to_le16(csum >> 16);
 }
 
@@ -60,15 +60,15 @@ int pxt4_block_bitmap_csum_verify(struct super_block *sb, pxt4_group_t group,
 {
 	__u32 hi;
 	__u32 provided, calculated;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
-	int sz = EXT4_CLUSTERS_PER_GROUP(sb) / 8;
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
+	int sz = PXT4_CLUSTERS_PER_GROUP(sb) / 8;
 
 	if (!pxt4_has_metadata_csum(sb))
 		return 1;
 
 	provided = le16_to_cpu(gdp->bg_block_bitmap_csum_lo);
 	calculated = pxt4_chksum(sbi, sbi->s_csum_seed, (__u8 *)bh->b_data, sz);
-	if (sbi->s_desc_size >= EXT4_BG_BLOCK_BITMAP_CSUM_HI_END) {
+	if (sbi->s_desc_size >= PXT4_BG_BLOCK_BITMAP_CSUM_HI_END) {
 		hi = le16_to_cpu(gdp->bg_block_bitmap_csum_hi);
 		provided |= (hi << 16);
 	} else
@@ -84,15 +84,15 @@ void pxt4_block_bitmap_csum_set(struct super_block *sb, pxt4_group_t group,
 				struct pxt4_group_desc *gdp,
 				struct buffer_head *bh)
 {
-	int sz = EXT4_CLUSTERS_PER_GROUP(sb) / 8;
+	int sz = PXT4_CLUSTERS_PER_GROUP(sb) / 8;
 	__u32 csum;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	if (!pxt4_has_metadata_csum(sb))
 		return;
 
 	csum = pxt4_chksum(sbi, sbi->s_csum_seed, (__u8 *)bh->b_data, sz);
 	gdp->bg_block_bitmap_csum_lo = cpu_to_le16(csum & 0xFFFF);
-	if (sbi->s_desc_size >= EXT4_BG_BLOCK_BITMAP_CSUM_HI_END)
+	if (sbi->s_desc_size >= PXT4_BG_BLOCK_BITMAP_CSUM_HI_END)
 		gdp->bg_block_bitmap_csum_hi = cpu_to_le16(csum >> 16);
 }

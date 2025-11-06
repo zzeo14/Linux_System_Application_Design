@@ -10,22 +10,22 @@
 #include <linux/xattr.h>
 
 /* Magic value in attribute blocks */
-#define EXT4_XATTR_MAGIC		0xEA020000
+#define PXT4_XATTR_MAGIC		0xEA020000
 
 /* Maximum number of references to one attribute block */
-#define EXT4_XATTR_REFCOUNT_MAX		1024
+#define PXT4_XATTR_REFCOUNT_MAX		1024
 
 /* Name indexes */
-#define EXT4_XATTR_INDEX_USER			1
-#define EXT4_XATTR_INDEX_POSIX_ACL_ACCESS	2
-#define EXT4_XATTR_INDEX_POSIX_ACL_DEFAULT	3
-#define EXT4_XATTR_INDEX_TRUSTED		4
-#define	EXT4_XATTR_INDEX_LUSTRE			5
-#define EXT4_XATTR_INDEX_SECURITY	        6
-#define EXT4_XATTR_INDEX_SYSTEM			7
-#define EXT4_XATTR_INDEX_RICHACL		8
-#define EXT4_XATTR_INDEX_ENCRYPTION		9
-#define EXT4_XATTR_INDEX_HURD			10 /* Reserved for Hurd */
+#define PXT4_XATTR_INDEX_USER			1
+#define PXT4_XATTR_INDEX_POSIX_ACL_ACCESS	2
+#define PXT4_XATTR_INDEX_POSIX_ACL_DEFAULT	3
+#define PXT4_XATTR_INDEX_TRUSTED		4
+#define	PXT4_XATTR_INDEX_LUSTRE			5
+#define PXT4_XATTR_INDEX_SECURITY	        6
+#define PXT4_XATTR_INDEX_SYSTEM			7
+#define PXT4_XATTR_INDEX_RICHACL		8
+#define PXT4_XATTR_INDEX_ENCRYPTION		9
+#define PXT4_XATTR_INDEX_HURD			10 /* Reserved for Hurd */
 
 struct pxt4_xattr_header {
 	__le32	h_magic;	/* magic number for identification */
@@ -51,23 +51,23 @@ struct pxt4_xattr_entry {
 	char	e_name[0];	/* attribute name */
 };
 
-#define EXT4_XATTR_PAD_BITS		2
-#define EXT4_XATTR_PAD		(1<<EXT4_XATTR_PAD_BITS)
-#define EXT4_XATTR_ROUND		(EXT4_XATTR_PAD-1)
-#define EXT4_XATTR_LEN(name_len) \
-	(((name_len) + EXT4_XATTR_ROUND + \
-	sizeof(struct pxt4_xattr_entry)) & ~EXT4_XATTR_ROUND)
-#define EXT4_XATTR_NEXT(entry) \
+#define PXT4_XATTR_PAD_BITS		2
+#define PXT4_XATTR_PAD		(1<<PXT4_XATTR_PAD_BITS)
+#define PXT4_XATTR_ROUND		(PXT4_XATTR_PAD-1)
+#define PXT4_XATTR_LEN(name_len) \
+	(((name_len) + PXT4_XATTR_ROUND + \
+	sizeof(struct pxt4_xattr_entry)) & ~PXT4_XATTR_ROUND)
+#define PXT4_XATTR_NEXT(entry) \
 	((struct pxt4_xattr_entry *)( \
-	 (char *)(entry) + EXT4_XATTR_LEN((entry)->e_name_len)))
-#define EXT4_XATTR_SIZE(size) \
-	(((size) + EXT4_XATTR_ROUND) & ~EXT4_XATTR_ROUND)
+	 (char *)(entry) + PXT4_XATTR_LEN((entry)->e_name_len)))
+#define PXT4_XATTR_SIZE(size) \
+	(((size) + PXT4_XATTR_ROUND) & ~PXT4_XATTR_ROUND)
 
 #define IHDR(inode, raw_inode) \
 	((struct pxt4_xattr_ibody_header *) \
 		((void *)raw_inode + \
-		EXT4_GOOD_OLD_INODE_SIZE + \
-		EXT4_I(inode)->i_extra_isize))
+		PXT4_GOOD_OLD_INODE_SIZE + \
+		PXT4_I(inode)->i_extra_isize))
 #define IFIRST(hdr) ((struct pxt4_xattr_entry *)((hdr)+1))
 
 /*
@@ -79,34 +79,34 @@ struct pxt4_xattr_entry {
  * defined in include/uapi/linux/limits.h, so changing it is going
  * not going to be trivial....)
  */
-#define EXT4_XATTR_SIZE_MAX (1 << 24)
+#define PXT4_XATTR_SIZE_MAX (1 << 24)
 
 /*
  * The minimum size of EA value when you start storing it in an external inode
  * size of block - size of header - size of 1 entry - 4 null bytes
 */
-#define EXT4_XATTR_MIN_LARGE_EA_SIZE(b)					\
-	((b) - EXT4_XATTR_LEN(3) - sizeof(struct pxt4_xattr_header) - 4)
+#define PXT4_XATTR_MIN_LARGE_EA_SIZE(b)					\
+	((b) - PXT4_XATTR_LEN(3) - sizeof(struct pxt4_xattr_header) - 4)
 
 #define BHDR(bh) ((struct pxt4_xattr_header *)((bh)->b_data))
 #define ENTRY(ptr) ((struct pxt4_xattr_entry *)(ptr))
 #define BFIRST(bh) ENTRY(BHDR(bh)+1)
 #define IS_LAST_ENTRY(entry) (*(__u32 *)(entry) == 0)
 
-#define EXT4_ZERO_XATTR_VALUE ((void *)-1)
+#define PXT4_ZERO_XATTR_VALUE ((void *)-1)
 
 /*
  * If we want to add an xattr to the inode, we should make sure that
  * i_extra_isize is not 0 and that the inode size is not less than
- * EXT4_GOOD_OLD_INODE_SIZE + extra_isize + pad.
- *   EXT4_GOOD_OLD_INODE_SIZE   extra_isize header   entry   pad  data
+ * PXT4_GOOD_OLD_INODE_SIZE + extra_isize + pad.
+ *   PXT4_GOOD_OLD_INODE_SIZE   extra_isize header   entry   pad  data
  * |--------------------------|------------|------|---------|---|-------|
  */
-#define EXT4_INODE_HAS_XATTR_SPACE(inode)				\
-	((EXT4_I(inode)->i_extra_isize != 0) &&				\
-	 (EXT4_GOOD_OLD_INODE_SIZE + EXT4_I(inode)->i_extra_isize +	\
-	  sizeof(struct pxt4_xattr_ibody_header) + EXT4_XATTR_PAD <=	\
-	  EXT4_INODE_SIZE((inode)->i_sb)))
+#define PXT4_INODE_HAS_XATTR_SPACE(inode)				\
+	((PXT4_I(inode)->i_extra_isize != 0) &&				\
+	 (PXT4_GOOD_OLD_INODE_SIZE + PXT4_I(inode)->i_extra_isize +	\
+	  sizeof(struct pxt4_xattr_ibody_header) + PXT4_XATTR_PAD <=	\
+	  PXT4_INODE_SIZE((inode)->i_sb)))
 
 struct pxt4_xattr_info {
 	const char *name;
@@ -138,10 +138,10 @@ extern const struct xattr_handler pxt4_xattr_user_handler;
 extern const struct xattr_handler pxt4_xattr_trusted_handler;
 extern const struct xattr_handler pxt4_xattr_security_handler;
 
-#define EXT4_XATTR_NAME_ENCRYPTION_CONTEXT "c"
+#define PXT4_XATTR_NAME_ENCRYPTION_CONTEXT "c"
 
 /*
- * The EXT4_STATE_NO_EXPAND is overloaded and used for two purposes.
+ * The PXT4_STATE_NO_EXPAND is overloaded and used for two purposes.
  * The first is to signal that there the inline xattrs and data are
  * taking up so much space that we might as well not keep trying to
  * expand it.  The second is that xattr_sem is taken for writing, so
@@ -151,25 +151,25 @@ extern const struct xattr_handler pxt4_xattr_security_handler;
  */
 static inline void pxt4_write_lock_xattr(struct inode *inode, int *save)
 {
-	down_write(&EXT4_I(inode)->xattr_sem);
-	*save = pxt4_test_inode_state(inode, EXT4_STATE_NO_EXPAND);
-	pxt4_set_inode_state(inode, EXT4_STATE_NO_EXPAND);
+	down_write(&PXT4_I(inode)->xattr_sem);
+	*save = pxt4_test_inode_state(inode, PXT4_STATE_NO_EXPAND);
+	pxt4_set_inode_state(inode, PXT4_STATE_NO_EXPAND);
 }
 
 static inline int pxt4_write_trylock_xattr(struct inode *inode, int *save)
 {
-	if (down_write_trylock(&EXT4_I(inode)->xattr_sem) == 0)
+	if (down_write_trylock(&PXT4_I(inode)->xattr_sem) == 0)
 		return 0;
-	*save = pxt4_test_inode_state(inode, EXT4_STATE_NO_EXPAND);
-	pxt4_set_inode_state(inode, EXT4_STATE_NO_EXPAND);
+	*save = pxt4_test_inode_state(inode, PXT4_STATE_NO_EXPAND);
+	pxt4_set_inode_state(inode, PXT4_STATE_NO_EXPAND);
 	return 1;
 }
 
 static inline void pxt4_write_unlock_xattr(struct inode *inode, int *save)
 {
 	if (*save == 0)
-		pxt4_clear_inode_state(inode, EXT4_STATE_NO_EXPAND);
-	up_write(&EXT4_I(inode)->xattr_sem);
+		pxt4_clear_inode_state(inode, PXT4_STATE_NO_EXPAND);
+	up_write(&PXT4_I(inode)->xattr_sem);
 }
 
 extern ssize_t pxt4_listxattr(struct dentry *, char *, size_t);

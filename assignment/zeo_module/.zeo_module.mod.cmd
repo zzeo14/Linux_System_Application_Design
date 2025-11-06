@@ -1,0 +1,1 @@
+cmd_/home/zeo/Desktop/Linux_System_Application_Design/assignment/zeo_module/zeo_module.mod := { echo  /home/zeo/Desktop/Linux_System_Application_Design/assignment/zeo_module/zeo_module.o;  echo; } > /home/zeo/Desktop/Linux_System_Application_Design/assignment/zeo_module/zeo_module.mod

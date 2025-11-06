@@ -13,15 +13,15 @@
 #include "xattr.h"
 #include "truncate.h"
 
-#define EXT4_XATTR_SYSTEM_DATA	"data"
-#define EXT4_MIN_INLINE_DATA_SIZE	((sizeof(__le32) * EXT4_N_BLOCKS))
-#define EXT4_INLINE_DOTDOT_OFFSET	2
-#define EXT4_INLINE_DOTDOT_SIZE		4
+#define PXT4_XATTR_SYSTEM_DATA	"data"
+#define PXT4_MIN_INLINE_DATA_SIZE	((sizeof(__le32) * PXT4_N_BLOCKS))
+#define PXT4_INLINE_DOTDOT_OFFSET	2
+#define PXT4_INLINE_DOTDOT_SIZE		4
 
 static int pxt4_get_inline_size(struct inode *inode)
 {
-	if (EXT4_I(inode)->i_inline_off)
-		return EXT4_I(inode)->i_inline_size;
+	if (PXT4_I(inode)->i_inline_off)
+		return PXT4_I(inode)->i_inline_size;
 
 	return 0;
 }
@@ -34,12 +34,12 @@ static int get_max_inline_xattr_value_size(struct inode *inode,
 	struct pxt4_inode *raw_inode;
 	int free, min_offs;
 
-	if (!EXT4_INODE_HAS_XATTR_SPACE(inode))
+	if (!PXT4_INODE_HAS_XATTR_SPACE(inode))
 		return 0;
 
-	min_offs = EXT4_SB(inode->i_sb)->s_inode_size -
-			EXT4_GOOD_OLD_INODE_SIZE -
-			EXT4_I(inode)->i_extra_isize -
+	min_offs = PXT4_SB(inode->i_sb)->s_inode_size -
+			PXT4_GOOD_OLD_INODE_SIZE -
+			PXT4_I(inode)->i_extra_isize -
 			sizeof(struct pxt4_xattr_ibody_header);
 
 	/*
@@ -47,17 +47,17 @@ static int get_max_inline_xattr_value_size(struct inode *inode,
 	 * needs an empty 4 bytes to indicate the gap between the xattr entry
 	 * and the name/value pair.
 	 */
-	if (!pxt4_test_inode_state(inode, EXT4_STATE_XATTR))
-		return EXT4_XATTR_SIZE(min_offs -
-			EXT4_XATTR_LEN(strlen(EXT4_XATTR_SYSTEM_DATA)) -
-			EXT4_XATTR_ROUND - sizeof(__u32));
+	if (!pxt4_test_inode_state(inode, PXT4_STATE_XATTR))
+		return PXT4_XATTR_SIZE(min_offs -
+			PXT4_XATTR_LEN(strlen(PXT4_XATTR_SYSTEM_DATA)) -
+			PXT4_XATTR_ROUND - sizeof(__u32));
 
 	raw_inode = pxt4_raw_inode(iloc);
 	header = IHDR(inode, raw_inode);
 	entry = IFIRST(header);
 
 	/* Compute min_offs. */
-	for (; !IS_LAST_ENTRY(entry); entry = EXT4_XATTR_NEXT(entry)) {
+	for (; !IS_LAST_ENTRY(entry); entry = PXT4_XATTR_NEXT(entry)) {
 		if (!entry->e_value_inum && entry->e_value_size) {
 			size_t offs = le16_to_cpu(entry->e_value_offs);
 			if (offs < min_offs)
@@ -67,18 +67,18 @@ static int get_max_inline_xattr_value_size(struct inode *inode,
 	free = min_offs -
 		((void *)entry - (void *)IFIRST(header)) - sizeof(__u32);
 
-	if (EXT4_I(inode)->i_inline_off) {
+	if (PXT4_I(inode)->i_inline_off) {
 		entry = (struct pxt4_xattr_entry *)
-			((void *)raw_inode + EXT4_I(inode)->i_inline_off);
+			((void *)raw_inode + PXT4_I(inode)->i_inline_off);
 
-		free += EXT4_XATTR_SIZE(le32_to_cpu(entry->e_value_size));
+		free += PXT4_XATTR_SIZE(le32_to_cpu(entry->e_value_size));
 		goto out;
 	}
 
-	free -= EXT4_XATTR_LEN(strlen(EXT4_XATTR_SYSTEM_DATA));
+	free -= PXT4_XATTR_LEN(strlen(PXT4_XATTR_SYSTEM_DATA));
 
-	if (free > EXT4_XATTR_ROUND)
-		free = EXT4_XATTR_SIZE(free - EXT4_XATTR_ROUND);
+	if (free > PXT4_XATTR_ROUND)
+		free = PXT4_XATTR_SIZE(free - PXT4_XATTR_ROUND);
 	else
 		free = 0;
 
@@ -96,7 +96,7 @@ int pxt4_get_max_inline_size(struct inode *inode)
 	int error, max_inline_size;
 	struct pxt4_iloc iloc;
 
-	if (EXT4_I(inode)->i_extra_isize == 0)
+	if (PXT4_I(inode)->i_extra_isize == 0)
 		return 0;
 
 	error = pxt4_get_inode_loc(inode, &iloc);
@@ -107,16 +107,16 @@ int pxt4_get_max_inline_size(struct inode *inode)
 		return 0;
 	}
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	max_inline_size = get_max_inline_xattr_value_size(inode, &iloc);
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 
 	brelse(iloc.bh);
 
 	if (!max_inline_size)
 		return 0;
 
-	return max_inline_size + EXT4_MIN_INLINE_DATA_SIZE;
+	return max_inline_size + PXT4_MIN_INLINE_DATA_SIZE;
 }
 
 /*
@@ -130,12 +130,12 @@ int pxt4_find_inline_data_nolock(struct inode *inode)
 		.s = { .not_found = -ENODATA, },
 	};
 	struct pxt4_xattr_info i = {
-		.name_index = EXT4_XATTR_INDEX_SYSTEM,
-		.name = EXT4_XATTR_SYSTEM_DATA,
+		.name_index = PXT4_XATTR_INDEX_SYSTEM,
+		.name = PXT4_XATTR_SYSTEM_DATA,
 	};
 	int error;
 
-	if (EXT4_I(inode)->i_extra_isize == 0)
+	if (PXT4_I(inode)->i_extra_isize == 0)
 		return 0;
 
 	error = pxt4_get_inode_loc(inode, &is.iloc);
@@ -148,16 +148,16 @@ int pxt4_find_inline_data_nolock(struct inode *inode)
 
 	if (!is.s.not_found) {
 		if (is.s.here->e_value_inum) {
-			EXT4_ERROR_INODE(inode, "inline data xattr refers "
+			PXT4_ERROR_INODE(inode, "inline data xattr refers "
 					 "to an external xattr inode");
 			error = -EFSCORRUPTED;
 			goto out;
 		}
-		EXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
+		PXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
 					(void *)pxt4_raw_inode(&is.iloc));
-		EXT4_I(inode)->i_inline_size = EXT4_MIN_INLINE_DATA_SIZE +
+		PXT4_I(inode)->i_inline_size = PXT4_MIN_INLINE_DATA_SIZE +
 				le32_to_cpu(is.s.here->e_value_size);
-		pxt4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		pxt4_set_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 	}
 out:
 	brelse(is.iloc.bh);
@@ -176,10 +176,10 @@ static int pxt4_read_inline_data(struct inode *inode, void *buffer,
 	if (!len)
 		return 0;
 
-	BUG_ON(len > EXT4_I(inode)->i_inline_size);
+	BUG_ON(len > PXT4_I(inode)->i_inline_size);
 
-	cp_len = len < EXT4_MIN_INLINE_DATA_SIZE ?
-			len : EXT4_MIN_INLINE_DATA_SIZE;
+	cp_len = len < PXT4_MIN_INLINE_DATA_SIZE ?
+			len : PXT4_MIN_INLINE_DATA_SIZE;
 
 	raw_inode = pxt4_raw_inode(iloc);
 	memcpy(buffer, (void *)(raw_inode->i_block), cp_len);
@@ -192,7 +192,7 @@ static int pxt4_read_inline_data(struct inode *inode, void *buffer,
 
 	header = IHDR(inode, raw_inode);
 	entry = (struct pxt4_xattr_entry *)((void *)raw_inode +
-					    EXT4_I(inode)->i_inline_off);
+					    PXT4_I(inode)->i_inline_off);
 	len = min_t(unsigned int, len,
 		    (unsigned int)le32_to_cpu(entry->e_value_size));
 
@@ -218,18 +218,18 @@ static void pxt4_write_inline_data(struct inode *inode, struct pxt4_iloc *iloc,
 	struct pxt4_inode *raw_inode;
 	int cp_len = 0;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return;
 
-	BUG_ON(!EXT4_I(inode)->i_inline_off);
-	BUG_ON(pos + len > EXT4_I(inode)->i_inline_size);
+	BUG_ON(!PXT4_I(inode)->i_inline_off);
+	BUG_ON(pos + len > PXT4_I(inode)->i_inline_size);
 
 	raw_inode = pxt4_raw_inode(iloc);
 	buffer += pos;
 
-	if (pos < EXT4_MIN_INLINE_DATA_SIZE) {
-		cp_len = pos + len > EXT4_MIN_INLINE_DATA_SIZE ?
-			 EXT4_MIN_INLINE_DATA_SIZE - pos : len;
+	if (pos < PXT4_MIN_INLINE_DATA_SIZE) {
+		cp_len = pos + len > PXT4_MIN_INLINE_DATA_SIZE ?
+			 PXT4_MIN_INLINE_DATA_SIZE - pos : len;
 		memcpy((void *)raw_inode->i_block + pos, buffer, cp_len);
 
 		len -= cp_len;
@@ -240,10 +240,10 @@ static void pxt4_write_inline_data(struct inode *inode, struct pxt4_iloc *iloc,
 	if (!len)
 		return;
 
-	pos -= EXT4_MIN_INLINE_DATA_SIZE;
+	pos -= PXT4_MIN_INLINE_DATA_SIZE;
 	header = IHDR(inode, raw_inode);
 	entry = (struct pxt4_xattr_entry *)((void *)raw_inode +
-					    EXT4_I(inode)->i_inline_off);
+					    PXT4_I(inode)->i_inline_off);
 
 	memcpy((void *)IFIRST(header) + le16_to_cpu(entry->e_value_offs) + pos,
 	       buffer, len);
@@ -258,8 +258,8 @@ static int pxt4_create_inline_data(handle_t *handle,
 		.s = { .not_found = -ENODATA, },
 	};
 	struct pxt4_xattr_info i = {
-		.name_index = EXT4_XATTR_INDEX_SYSTEM,
-		.name = EXT4_XATTR_SYSTEM_DATA,
+		.name_index = PXT4_XATTR_INDEX_SYSTEM,
+		.name = PXT4_XATTR_SYSTEM_DATA,
 	};
 
 	error = pxt4_get_inode_loc(inode, &is.iloc);
@@ -271,9 +271,9 @@ static int pxt4_create_inline_data(handle_t *handle,
 	if (error)
 		goto out;
 
-	if (len > EXT4_MIN_INLINE_DATA_SIZE) {
-		value = EXT4_ZERO_XATTR_VALUE;
-		len -= EXT4_MIN_INLINE_DATA_SIZE;
+	if (len > PXT4_MIN_INLINE_DATA_SIZE) {
+		value = PXT4_ZERO_XATTR_VALUE;
+		len -= PXT4_MIN_INLINE_DATA_SIZE;
 	} else {
 		value = "";
 		len = 0;
@@ -293,18 +293,18 @@ static int pxt4_create_inline_data(handle_t *handle,
 	if (error) {
 		if (error == -ENOSPC)
 			pxt4_clear_inode_state(inode,
-					       EXT4_STATE_MAY_INLINE_DATA);
+					       PXT4_STATE_MAY_INLINE_DATA);
 		goto out;
 	}
 
 	memset((void *)pxt4_raw_inode(&is.iloc)->i_block,
-		0, EXT4_MIN_INLINE_DATA_SIZE);
+		0, PXT4_MIN_INLINE_DATA_SIZE);
 
-	EXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
+	PXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
 				      (void *)pxt4_raw_inode(&is.iloc));
-	EXT4_I(inode)->i_inline_size = len + EXT4_MIN_INLINE_DATA_SIZE;
-	pxt4_clear_inode_flag(inode, EXT4_INODE_EXTENTS);
-	pxt4_set_inode_flag(inode, EXT4_INODE_INLINE_DATA);
+	PXT4_I(inode)->i_inline_size = len + PXT4_MIN_INLINE_DATA_SIZE;
+	pxt4_clear_inode_flag(inode, PXT4_INODE_EXTENTS);
+	pxt4_set_inode_flag(inode, PXT4_INODE_INLINE_DATA);
 	get_bh(is.iloc.bh);
 	error = pxt4_mark_iloc_dirty(handle, inode, &is.iloc);
 
@@ -322,12 +322,12 @@ static int pxt4_update_inline_data(handle_t *handle, struct inode *inode,
 		.s = { .not_found = -ENODATA, },
 	};
 	struct pxt4_xattr_info i = {
-		.name_index = EXT4_XATTR_INDEX_SYSTEM,
-		.name = EXT4_XATTR_SYSTEM_DATA,
+		.name_index = PXT4_XATTR_INDEX_SYSTEM,
+		.name = PXT4_XATTR_SYSTEM_DATA,
 	};
 
 	/* If the old space is ok, write the data directly. */
-	if (len <= EXT4_I(inode)->i_inline_size)
+	if (len <= PXT4_I(inode)->i_inline_size)
 		return 0;
 
 	error = pxt4_get_inode_loc(inode, &is.iloc);
@@ -340,7 +340,7 @@ static int pxt4_update_inline_data(handle_t *handle, struct inode *inode,
 
 	BUG_ON(is.s.not_found);
 
-	len -= EXT4_MIN_INLINE_DATA_SIZE;
+	len -= PXT4_MIN_INLINE_DATA_SIZE;
 	value = kzalloc(len, GFP_NOFS);
 	if (!value) {
 		error = -ENOMEM;
@@ -365,11 +365,11 @@ static int pxt4_update_inline_data(handle_t *handle, struct inode *inode,
 	if (error)
 		goto out;
 
-	EXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
+	PXT4_I(inode)->i_inline_off = (u16)((void *)is.s.here -
 				      (void *)pxt4_raw_inode(&is.iloc));
-	EXT4_I(inode)->i_inline_size = EXT4_MIN_INLINE_DATA_SIZE +
+	PXT4_I(inode)->i_inline_size = PXT4_MIN_INLINE_DATA_SIZE +
 				le32_to_cpu(is.s.here->e_value_size);
-	pxt4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+	pxt4_set_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 	get_bh(is.iloc.bh);
 	error = pxt4_mark_iloc_dirty(handle, inode, &is.iloc);
 
@@ -383,9 +383,9 @@ static int pxt4_prepare_inline_data(handle_t *handle, struct inode *inode,
 				    unsigned int len)
 {
 	int ret, size, no_expand;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
-	if (!pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA))
+	if (!pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA))
 		return -ENOSPC;
 
 	size = pxt4_get_max_inline_size(inode);
@@ -406,13 +406,13 @@ static int pxt4_prepare_inline_data(handle_t *handle, struct inode *inode,
 static int pxt4_destroy_inline_data_nolock(handle_t *handle,
 					   struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct pxt4_xattr_ibody_find is = {
 		.s = { .not_found = 0, },
 	};
 	struct pxt4_xattr_info i = {
-		.name_index = EXT4_XATTR_INDEX_SYSTEM,
-		.name = EXT4_XATTR_SYSTEM_DATA,
+		.name_index = PXT4_XATTR_INDEX_SYSTEM,
+		.name = PXT4_XATTR_SYSTEM_DATA,
 		.value = NULL,
 		.value_len = 0,
 	};
@@ -439,24 +439,24 @@ static int pxt4_destroy_inline_data_nolock(handle_t *handle,
 		goto out;
 
 	memset((void *)pxt4_raw_inode(&is.iloc)->i_block,
-		0, EXT4_MIN_INLINE_DATA_SIZE);
-	memset(ei->i_data, 0, EXT4_MIN_INLINE_DATA_SIZE);
+		0, PXT4_MIN_INLINE_DATA_SIZE);
+	memset(ei->i_data, 0, PXT4_MIN_INLINE_DATA_SIZE);
 
 	if (pxt4_has_feature_extents(inode->i_sb)) {
 		if (S_ISDIR(inode->i_mode) ||
 		    S_ISREG(inode->i_mode) || S_ISLNK(inode->i_mode)) {
-			pxt4_set_inode_flag(inode, EXT4_INODE_EXTENTS);
+			pxt4_set_inode_flag(inode, PXT4_INODE_EXTENTS);
 			pxt4_ext_tree_init(handle, inode);
 		}
 	}
-	pxt4_clear_inode_flag(inode, EXT4_INODE_INLINE_DATA);
+	pxt4_clear_inode_flag(inode, PXT4_INODE_INLINE_DATA);
 
 	get_bh(is.iloc.bh);
 	error = pxt4_mark_iloc_dirty(handle, inode, &is.iloc);
 
-	EXT4_I(inode)->i_inline_off = 0;
-	EXT4_I(inode)->i_inline_size = 0;
-	pxt4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+	PXT4_I(inode)->i_inline_off = 0;
+	PXT4_I(inode)->i_inline_size = 0;
+	pxt4_clear_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 out:
 	brelse(is.iloc.bh);
 	if (error == -ENODATA)
@@ -475,7 +475,7 @@ static int pxt4_read_inline_page(struct inode *inode, struct page *page)
 	BUG_ON(!pxt4_has_inline_data(inode));
 	BUG_ON(page->index);
 
-	if (!EXT4_I(inode)->i_inline_off) {
+	if (!PXT4_I(inode)->i_inline_off) {
 		pxt4_warning(inode->i_sb, "inode %lu doesn't have inline data.",
 			     inode->i_ino);
 		goto out;
@@ -502,9 +502,9 @@ int pxt4_readpage_inline(struct inode *inode, struct page *page)
 {
 	int ret = 0;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		return -EAGAIN;
 	}
 
@@ -519,7 +519,7 @@ int pxt4_readpage_inline(struct inode *inode, struct page *page)
 		SetPageUptodate(page);
 	}
 
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 
 	unlock_page(page);
 	return ret >= 0 ? 0 : ret;
@@ -541,7 +541,7 @@ static int pxt4_convert_inline_data_to_extent(struct address_space *mapping,
 		 * clear the flag so that no new write
 		 * will trap here again.
 		 */
-		pxt4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		pxt4_clear_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 		return 0;
 	}
 
@@ -552,7 +552,7 @@ static int pxt4_convert_inline_data_to_extent(struct address_space *mapping,
 		return ret;
 
 retry:
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE, needed_blocks);
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE, needed_blocks);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		handle = NULL;
@@ -667,7 +667,7 @@ int pxt4_try_to_write_inline_data(struct address_space *mapping,
 	 * The possible write could happen in the inode,
 	 * so try to reserve the space in inode first.
 	 */
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		handle = NULL;
@@ -698,7 +698,7 @@ int pxt4_try_to_write_inline_data(struct address_space *mapping,
 	}
 
 	*pagep = page;
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
 		ret = 0;
 		unlock_page(page);
@@ -718,7 +718,7 @@ int pxt4_try_to_write_inline_data(struct address_space *mapping,
 	ret = 1;
 	handle = NULL;
 out_up_read:
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 out:
 	if (handle && (ret != 1))
 		pxt4_journal_stop(handle);
@@ -813,9 +813,9 @@ static int pxt4_da_convert_inline_data_to_extent(struct address_space *mapping,
 	if (!page)
 		return -ENOMEM;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
-		pxt4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		pxt4_clear_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 		goto out;
 	}
 
@@ -830,7 +830,7 @@ static int pxt4_da_convert_inline_data_to_extent(struct address_space *mapping,
 	ret = __block_write_begin(page, 0, inline_size,
 				  pxt4_da_get_block_prep);
 	if (ret) {
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		unlock_page(page);
 		put_page(page);
 		pxt4_truncate_failed_write(inode);
@@ -839,11 +839,11 @@ static int pxt4_da_convert_inline_data_to_extent(struct address_space *mapping,
 
 	SetPageDirty(page);
 	SetPageUptodate(page);
-	pxt4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+	pxt4_clear_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 	*fsdata = (void *)CONVERT_INLINE_DATA;
 
 out:
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	if (page) {
 		unlock_page(page);
 		put_page(page);
@@ -877,7 +877,7 @@ int pxt4_da_write_inline_data_begin(struct address_space *mapping,
 		return ret;
 
 retry_journal:
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		goto out;
@@ -916,7 +916,7 @@ retry_journal:
 		goto out_journal;
 	}
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
 		ret = 0;
 		goto out_release_page;
@@ -931,12 +931,12 @@ retry_journal:
 	if (ret)
 		goto out_release_page;
 
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	*pagep = page;
 	brelse(iloc.bh);
 	return 1;
 out_release_page:
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	unlock_page(page);
 	put_page(page);
 out_journal:
@@ -1062,11 +1062,11 @@ static void *pxt4_get_inline_xattr_pos(struct inode *inode,
 	struct pxt4_xattr_entry *entry;
 	struct pxt4_xattr_ibody_header *header;
 
-	BUG_ON(!EXT4_I(inode)->i_inline_off);
+	BUG_ON(!PXT4_I(inode)->i_inline_off);
 
 	header = IHDR(inode, pxt4_raw_inode(iloc));
 	entry = (struct pxt4_xattr_entry *)((void *)pxt4_raw_inode(iloc) +
-					    EXT4_I(inode)->i_inline_off);
+					    PXT4_I(inode)->i_inline_off);
 
 	return (void *)IFIRST(header) + le16_to_cpu(entry->e_value_offs);
 }
@@ -1101,21 +1101,21 @@ static int pxt4_update_inline_dir(handle_t *handle, struct inode *dir,
 				  struct pxt4_iloc *iloc)
 {
 	int ret;
-	int old_size = EXT4_I(dir)->i_inline_size - EXT4_MIN_INLINE_DATA_SIZE;
+	int old_size = PXT4_I(dir)->i_inline_size - PXT4_MIN_INLINE_DATA_SIZE;
 	int new_size = get_max_inline_xattr_value_size(dir, iloc);
 
-	if (new_size - old_size <= EXT4_DIR_REC_LEN(1))
+	if (new_size - old_size <= PXT4_DIR_REC_LEN(1))
 		return -ENOSPC;
 
 	ret = pxt4_update_inline_data(handle, dir,
-				      new_size + EXT4_MIN_INLINE_DATA_SIZE);
+				      new_size + PXT4_MIN_INLINE_DATA_SIZE);
 	if (ret)
 		return ret;
 
 	pxt4_update_final_de(pxt4_get_inline_xattr_pos(dir, iloc), old_size,
-			     EXT4_I(dir)->i_inline_size -
-						EXT4_MIN_INLINE_DATA_SIZE);
-	dir->i_size = EXT4_I(dir)->i_disksize = EXT4_I(dir)->i_inline_size;
+			     PXT4_I(dir)->i_inline_size -
+						PXT4_MIN_INLINE_DATA_SIZE);
+	dir->i_size = PXT4_I(dir)->i_disksize = PXT4_I(dir)->i_inline_size;
 	return 0;
 }
 
@@ -1133,7 +1133,7 @@ static void pxt4_restore_inline_data(handle_t *handle, struct inode *inode,
 		return;
 	}
 	pxt4_write_inline_data(inode, iloc, buf, 0, inline_size);
-	pxt4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+	pxt4_set_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 }
 
 static int pxt4_finish_convert_inline_dir(handle_t *handle,
@@ -1156,17 +1156,17 @@ static int pxt4_finish_convert_inline_dir(handle_t *handle,
 		le32_to_cpu(((struct pxt4_dir_entry_2 *)buf)->inode), 1);
 	header_size = (void *)de - target;
 
-	memcpy((void *)de, buf + EXT4_INLINE_DOTDOT_SIZE,
-		inline_size - EXT4_INLINE_DOTDOT_SIZE);
+	memcpy((void *)de, buf + PXT4_INLINE_DOTDOT_SIZE,
+		inline_size - PXT4_INLINE_DOTDOT_SIZE);
 
 	if (pxt4_has_metadata_csum(inode->i_sb))
 		csum_size = sizeof(struct pxt4_dir_entry_tail);
 
 	inode->i_size = inode->i_sb->s_blocksize;
 	i_size_write(inode, inode->i_sb->s_blocksize);
-	EXT4_I(inode)->i_disksize = inode->i_sb->s_blocksize;
+	PXT4_I(inode)->i_disksize = inode->i_sb->s_blocksize;
 	pxt4_update_final_de(dir_block->b_data,
-			inline_size - EXT4_INLINE_DOTDOT_SIZE + header_size,
+			inline_size - PXT4_INLINE_DOTDOT_SIZE + header_size,
 			inode->i_sb->s_blocksize - csum_size);
 
 	if (csum_size)
@@ -1207,8 +1207,8 @@ static int pxt4_convert_inline_data_nolock(handle_t *handle,
 	 */
 	if (S_ISDIR(inode->i_mode)) {
 		error = pxt4_check_all_de(inode, iloc->bh,
-					buf + EXT4_INLINE_DOTDOT_SIZE,
-					inline_size - EXT4_INLINE_DOTDOT_SIZE);
+					buf + PXT4_INLINE_DOTDOT_SIZE,
+					inline_size - PXT4_INLINE_DOTDOT_SIZE);
 		if (error)
 			goto out;
 	}
@@ -1220,10 +1220,10 @@ static int pxt4_convert_inline_data_nolock(handle_t *handle,
 	map.m_lblk = 0;
 	map.m_len = 1;
 	map.m_flags = 0;
-	error = pxt4_map_blocks(handle, inode, &map, EXT4_GET_BLOCKS_CREATE);
+	error = pxt4_map_blocks(handle, inode, &map, PXT4_GET_BLOCKS_CREATE);
 	if (error < 0)
 		goto out_restore;
-	if (!(map.m_flags & EXT4_MAP_MAPPED)) {
+	if (!(map.m_flags & PXT4_MAP_MAPPED)) {
 		error = -EIO;
 		goto out_restore;
 	}
@@ -1285,8 +1285,8 @@ int pxt4_try_add_inline_entry(handle_t *handle, struct pxt4_filename *fname,
 		goto out;
 
 	inline_start = (void *)pxt4_raw_inode(&iloc)->i_block +
-						 EXT4_INLINE_DOTDOT_SIZE;
-	inline_size = EXT4_MIN_INLINE_DATA_SIZE - EXT4_INLINE_DOTDOT_SIZE;
+						 PXT4_INLINE_DOTDOT_SIZE;
+	inline_size = PXT4_MIN_INLINE_DATA_SIZE - PXT4_INLINE_DOTDOT_SIZE;
 
 	ret = pxt4_add_dirent_to_inline(handle, fname, dir, inode, &iloc,
 					inline_start, inline_size);
@@ -1294,16 +1294,16 @@ int pxt4_try_add_inline_entry(handle_t *handle, struct pxt4_filename *fname,
 		goto out;
 
 	/* check whether it can be inserted to inline xattr space. */
-	inline_size = EXT4_I(dir)->i_inline_size -
-			EXT4_MIN_INLINE_DATA_SIZE;
+	inline_size = PXT4_I(dir)->i_inline_size -
+			PXT4_MIN_INLINE_DATA_SIZE;
 	if (!inline_size) {
 		/* Try to use the xattr space.*/
 		ret = pxt4_update_inline_dir(handle, dir, &iloc);
 		if (ret && ret != -ENOSPC)
 			goto out;
 
-		inline_size = EXT4_I(dir)->i_inline_size -
-				EXT4_MIN_INLINE_DATA_SIZE;
+		inline_size = PXT4_I(dir)->i_inline_size -
+				PXT4_MIN_INLINE_DATA_SIZE;
 	}
 
 	if (inline_size) {
@@ -1357,9 +1357,9 @@ int pxt4_inlinedir_to_tree(struct file *dir_file,
 	if (ret)
 		return ret;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		*has_inline_data = 0;
 		goto out;
 	}
@@ -1368,12 +1368,12 @@ int pxt4_inlinedir_to_tree(struct file *dir_file,
 	dir_buf = kmalloc(inline_size, GFP_NOFS);
 	if (!dir_buf) {
 		ret = -ENOMEM;
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		goto out;
 	}
 
 	ret = pxt4_read_inline_data(inode, dir_buf, inline_size, &iloc);
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	if (ret < 0)
 		goto out;
 
@@ -1390,21 +1390,21 @@ int pxt4_inlinedir_to_tree(struct file *dir_file,
 			fake.name_len = 1;
 			strcpy(fake.name, ".");
 			fake.rec_len = pxt4_rec_len_to_disk(
-						EXT4_DIR_REC_LEN(fake.name_len),
+						PXT4_DIR_REC_LEN(fake.name_len),
 						inline_size);
 			pxt4_set_de_type(inode->i_sb, &fake, S_IFDIR);
 			de = &fake;
-			pos = EXT4_INLINE_DOTDOT_OFFSET;
-		} else if (pos == EXT4_INLINE_DOTDOT_OFFSET) {
+			pos = PXT4_INLINE_DOTDOT_OFFSET;
+		} else if (pos == PXT4_INLINE_DOTDOT_OFFSET) {
 			fake.inode = cpu_to_le32(parent_ino);
 			fake.name_len = 2;
 			strcpy(fake.name, "..");
 			fake.rec_len = pxt4_rec_len_to_disk(
-						EXT4_DIR_REC_LEN(fake.name_len),
+						PXT4_DIR_REC_LEN(fake.name_len),
 						inline_size);
 			pxt4_set_de_type(inode->i_sb, &fake, S_IFDIR);
 			de = &fake;
-			pos = EXT4_INLINE_DOTDOT_SIZE;
+			pos = PXT4_INLINE_DOTDOT_SIZE;
 		} else {
 			de = (struct pxt4_dir_entry_2 *)(dir_buf + pos);
 			pos += pxt4_rec_len_from_disk(de->rec_len, inline_size);
@@ -1466,9 +1466,9 @@ int pxt4_read_inline_dir(struct file *file,
 	if (ret)
 		return ret;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		*has_inline_data = 0;
 		goto out;
 	}
@@ -1477,12 +1477,12 @@ int pxt4_read_inline_dir(struct file *file,
 	dir_buf = kmalloc(inline_size, GFP_NOFS);
 	if (!dir_buf) {
 		ret = -ENOMEM;
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 		goto out;
 	}
 
 	ret = pxt4_read_inline_data(inode, dir_buf, inline_size, &iloc);
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	if (ret < 0)
 		goto out;
 
@@ -1494,13 +1494,13 @@ int pxt4_read_inline_dir(struct file *file,
 	/*
 	 * dotdot_offset and dotdot_size is the real offset and
 	 * size for ".." and "." if the dir is block based while
-	 * the real size for them are only EXT4_INLINE_DOTDOT_SIZE.
+	 * the real size for them are only PXT4_INLINE_DOTDOT_SIZE.
 	 * So we will use extra_offset and extra_size to indicate them
 	 * during the inline dir iteration.
 	 */
-	dotdot_offset = EXT4_DIR_REC_LEN(1);
-	dotdot_size = dotdot_offset + EXT4_DIR_REC_LEN(2);
-	extra_offset = dotdot_size - EXT4_INLINE_DOTDOT_SIZE;
+	dotdot_offset = PXT4_DIR_REC_LEN(1);
+	dotdot_size = dotdot_offset + PXT4_DIR_REC_LEN(2);
+	extra_offset = dotdot_size - PXT4_INLINE_DOTDOT_SIZE;
 	extra_size = extra_offset + inline_size;
 
 	/*
@@ -1534,7 +1534,7 @@ int pxt4_read_inline_dir(struct file *file,
 			 * failure will be detected in the
 			 * dirent test below. */
 			if (pxt4_rec_len_from_disk(de->rec_len, extra_size)
-				< EXT4_DIR_REC_LEN(1))
+				< PXT4_DIR_REC_LEN(1))
 				break;
 			i += pxt4_rec_len_from_disk(de->rec_len,
 						    extra_size);
@@ -1601,7 +1601,7 @@ struct buffer_head *pxt4_get_first_inline_block(struct inode *inode,
 int pxt4_try_create_inline_dir(handle_t *handle, struct inode *parent,
 			       struct inode *inode)
 {
-	int ret, inline_size = EXT4_MIN_INLINE_DATA_SIZE;
+	int ret, inline_size = PXT4_MIN_INLINE_DATA_SIZE;
 	struct pxt4_iloc iloc;
 	struct pxt4_dir_entry_2 *de;
 
@@ -1619,13 +1619,13 @@ int pxt4_try_create_inline_dir(handle_t *handle, struct inode *parent,
 	 */
 	de = (struct pxt4_dir_entry_2 *)pxt4_raw_inode(&iloc)->i_block;
 	de->inode = cpu_to_le32(parent->i_ino);
-	de = (struct pxt4_dir_entry_2 *)((void *)de + EXT4_INLINE_DOTDOT_SIZE);
+	de = (struct pxt4_dir_entry_2 *)((void *)de + PXT4_INLINE_DOTDOT_SIZE);
 	de->inode = 0;
 	de->rec_len = pxt4_rec_len_to_disk(
-				inline_size - EXT4_INLINE_DOTDOT_SIZE,
+				inline_size - PXT4_INLINE_DOTDOT_SIZE,
 				inline_size);
 	set_nlink(inode, 2);
-	inode->i_size = EXT4_I(inode)->i_disksize = inline_size;
+	inode->i_size = PXT4_I(inode)->i_disksize = inline_size;
 out:
 	brelse(iloc.bh);
 	return ret;
@@ -1644,15 +1644,15 @@ struct buffer_head *pxt4_find_inline_entry(struct inode *dir,
 	if (pxt4_get_inode_loc(dir, &iloc))
 		return NULL;
 
-	down_read(&EXT4_I(dir)->xattr_sem);
+	down_read(&PXT4_I(dir)->xattr_sem);
 	if (!pxt4_has_inline_data(dir)) {
 		*has_inline_data = 0;
 		goto out;
 	}
 
 	inline_start = (void *)pxt4_raw_inode(&iloc)->i_block +
-						EXT4_INLINE_DOTDOT_SIZE;
-	inline_size = EXT4_MIN_INLINE_DATA_SIZE - EXT4_INLINE_DOTDOT_SIZE;
+						PXT4_INLINE_DOTDOT_SIZE;
+	inline_size = PXT4_MIN_INLINE_DATA_SIZE - PXT4_INLINE_DOTDOT_SIZE;
 	ret = pxt4_search_dir(iloc.bh, inline_start, inline_size,
 			      dir, fname, 0, res_dir);
 	if (ret == 1)
@@ -1660,11 +1660,11 @@ struct buffer_head *pxt4_find_inline_entry(struct inode *dir,
 	if (ret < 0)
 		goto out;
 
-	if (pxt4_get_inline_size(dir) == EXT4_MIN_INLINE_DATA_SIZE)
+	if (pxt4_get_inline_size(dir) == PXT4_MIN_INLINE_DATA_SIZE)
 		goto out;
 
 	inline_start = pxt4_get_inline_xattr_pos(dir, &iloc);
-	inline_size = pxt4_get_inline_size(dir) - EXT4_MIN_INLINE_DATA_SIZE;
+	inline_size = pxt4_get_inline_size(dir) - PXT4_MIN_INLINE_DATA_SIZE;
 
 	ret = pxt4_search_dir(iloc.bh, inline_start, inline_size,
 			      dir, fname, 0, res_dir);
@@ -1675,7 +1675,7 @@ out:
 	brelse(iloc.bh);
 	iloc.bh = NULL;
 out_find:
-	up_read(&EXT4_I(dir)->xattr_sem);
+	up_read(&PXT4_I(dir)->xattr_sem);
 	return iloc.bh;
 }
 
@@ -1700,15 +1700,15 @@ int pxt4_delete_inline_entry(handle_t *handle,
 	}
 
 	if ((void *)de_del - ((void *)pxt4_raw_inode(&iloc)->i_block) <
-		EXT4_MIN_INLINE_DATA_SIZE) {
+		PXT4_MIN_INLINE_DATA_SIZE) {
 		inline_start = (void *)pxt4_raw_inode(&iloc)->i_block +
-					EXT4_INLINE_DOTDOT_SIZE;
-		inline_size = EXT4_MIN_INLINE_DATA_SIZE -
-				EXT4_INLINE_DOTDOT_SIZE;
+					PXT4_INLINE_DOTDOT_SIZE;
+		inline_size = PXT4_MIN_INLINE_DATA_SIZE -
+				PXT4_INLINE_DOTDOT_SIZE;
 	} else {
 		inline_start = pxt4_get_inline_xattr_pos(dir, &iloc);
 		inline_size = pxt4_get_inline_size(dir) -
-				EXT4_MIN_INLINE_DATA_SIZE;
+				PXT4_MIN_INLINE_DATA_SIZE;
 	}
 
 	BUFFER_TRACE(bh, "get_write_access");
@@ -1746,14 +1746,14 @@ pxt4_get_inline_entry(struct inode *inode,
 
 	BUG_ON(offset > pxt4_get_inline_size(inode));
 
-	if (offset < EXT4_MIN_INLINE_DATA_SIZE) {
+	if (offset < PXT4_MIN_INLINE_DATA_SIZE) {
 		inline_pos = (void *)pxt4_raw_inode(iloc)->i_block;
-		*inline_size = EXT4_MIN_INLINE_DATA_SIZE;
+		*inline_size = PXT4_MIN_INLINE_DATA_SIZE;
 	} else {
 		inline_pos = pxt4_get_inline_xattr_pos(inode, iloc);
-		offset -= EXT4_MIN_INLINE_DATA_SIZE;
+		offset -= PXT4_MIN_INLINE_DATA_SIZE;
 		*inline_size = pxt4_get_inline_size(inode) -
-				EXT4_MIN_INLINE_DATA_SIZE;
+				PXT4_MIN_INLINE_DATA_SIZE;
 	}
 
 	if (inline_start)
@@ -1773,12 +1773,12 @@ bool empty_inline_dir(struct inode *dir, int *has_inline_data)
 
 	err = pxt4_get_inode_loc(dir, &iloc);
 	if (err) {
-		EXT4_ERROR_INODE(dir, "error %d getting inode %lu block",
+		PXT4_ERROR_INODE(dir, "error %d getting inode %lu block",
 				 err, dir->i_ino);
 		return true;
 	}
 
-	down_read(&EXT4_I(dir)->xattr_sem);
+	down_read(&PXT4_I(dir)->xattr_sem);
 	if (!pxt4_has_inline_data(dir)) {
 		*has_inline_data = 0;
 		goto out;
@@ -1794,7 +1794,7 @@ bool empty_inline_dir(struct inode *dir, int *has_inline_data)
 	}
 
 	inline_len = pxt4_get_inline_size(dir);
-	offset = EXT4_INLINE_DOTDOT_SIZE;
+	offset = PXT4_INLINE_DOTDOT_SIZE;
 	while (offset < inline_len) {
 		de = pxt4_get_inline_entry(dir, &iloc, offset,
 					   &inline_pos, &inline_size);
@@ -1819,7 +1819,7 @@ bool empty_inline_dir(struct inode *dir, int *has_inline_data)
 	}
 
 out:
-	up_read(&EXT4_I(dir)->xattr_sem);
+	up_read(&PXT4_I(dir)->xattr_sem);
 	brelse(iloc.bh);
 	return ret;
 }
@@ -1841,7 +1841,7 @@ int pxt4_inline_data_iomap(struct inode *inode, struct iomap *iomap)
 	int error = -EAGAIN;
 	struct pxt4_iloc iloc;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode))
 		goto out;
 
@@ -1863,7 +1863,7 @@ int pxt4_inline_data_iomap(struct inode *inode, struct iomap *iomap)
 	iomap->flags = 0;
 
 out:
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	return error;
 }
 
@@ -1878,7 +1878,7 @@ int pxt4_inline_data_fiemap(struct inode *inode,
 	int error = 0;
 	struct pxt4_iloc iloc;
 
-	down_read(&EXT4_I(inode)->xattr_sem);
+	down_read(&PXT4_I(inode)->xattr_sem);
 	if (!pxt4_has_inline_data(inode)) {
 		*has_inline = 0;
 		goto out;
@@ -1901,7 +1901,7 @@ int pxt4_inline_data_fiemap(struct inode *inode,
 
 	brelse(iloc.bh);
 out:
-	up_read(&EXT4_I(inode)->xattr_sem);
+	up_read(&PXT4_I(inode)->xattr_sem);
 	if (physical)
 		error = fiemap_fill_next_extent(fieinfo, start, physical,
 						inline_len, flags);
@@ -1918,13 +1918,13 @@ int pxt4_inline_data_truncate(struct inode *inode, int *has_inline)
 		.s = { .not_found = -ENODATA, },
 	};
 	struct pxt4_xattr_info i = {
-		.name_index = EXT4_XATTR_INDEX_SYSTEM,
-		.name = EXT4_XATTR_SYSTEM_DATA,
+		.name_index = PXT4_XATTR_INDEX_SYSTEM,
+		.name = PXT4_XATTR_SYSTEM_DATA,
 	};
 
 
 	needed_blocks = pxt4_writepage_trans_blocks(inode);
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, needed_blocks);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, needed_blocks);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -1942,14 +1942,14 @@ int pxt4_inline_data_truncate(struct inode *inode, int *has_inline)
 	if ((err = pxt4_get_inode_loc(inode, &is.iloc)) != 0)
 		goto out;
 
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 	i_size = inode->i_size;
 	inline_size = pxt4_get_inline_size(inode);
-	EXT4_I(inode)->i_disksize = i_size;
+	PXT4_I(inode)->i_disksize = i_size;
 
 	if (i_size < inline_size) {
 		/* Clear the content in the xattr space. */
-		if (inline_size > EXT4_MIN_INLINE_DATA_SIZE) {
+		if (inline_size > PXT4_MIN_INLINE_DATA_SIZE) {
 			if ((err = pxt4_xattr_ibody_find(inode, &i, &is)) != 0)
 				goto out_error;
 
@@ -1968,8 +1968,8 @@ int pxt4_inline_data_truncate(struct inode *inode, int *has_inline)
 				goto out_error;
 
 			i.value = value;
-			i.value_len = i_size > EXT4_MIN_INLINE_DATA_SIZE ?
-					i_size - EXT4_MIN_INLINE_DATA_SIZE : 0;
+			i.value_len = i_size > PXT4_MIN_INLINE_DATA_SIZE ?
+					i_size - PXT4_MIN_INLINE_DATA_SIZE : 0;
 			err = pxt4_xattr_ibody_inline_set(handle, inode,
 							  &i, &is);
 			if (err)
@@ -1977,19 +1977,19 @@ int pxt4_inline_data_truncate(struct inode *inode, int *has_inline)
 		}
 
 		/* Clear the content within i_blocks. */
-		if (i_size < EXT4_MIN_INLINE_DATA_SIZE) {
+		if (i_size < PXT4_MIN_INLINE_DATA_SIZE) {
 			void *p = (void *) pxt4_raw_inode(&is.iloc)->i_block;
 			memset(p + i_size, 0,
-			       EXT4_MIN_INLINE_DATA_SIZE - i_size);
+			       PXT4_MIN_INLINE_DATA_SIZE - i_size);
 		}
 
-		EXT4_I(inode)->i_inline_size = i_size <
-					EXT4_MIN_INLINE_DATA_SIZE ?
-					EXT4_MIN_INLINE_DATA_SIZE : i_size;
+		PXT4_I(inode)->i_inline_size = i_size <
+					PXT4_MIN_INLINE_DATA_SIZE ?
+					PXT4_MIN_INLINE_DATA_SIZE : i_size;
 	}
 
 out_error:
-	up_write(&EXT4_I(inode)->i_data_sem);
+	up_write(&PXT4_I(inode)->i_data_sem);
 out:
 	brelse(is.iloc.bh);
 	pxt4_write_unlock_xattr(inode, &no_expand);
@@ -2014,11 +2014,11 @@ int pxt4_convert_inline_data(struct inode *inode)
 	struct pxt4_iloc iloc;
 
 	if (!pxt4_has_inline_data(inode)) {
-		pxt4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		pxt4_clear_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA);
 		return 0;
-	} else if (!pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+	} else if (!pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA)) {
 		/*
-		 * Inode has inline data but EXT4_STATE_MAY_INLINE_DATA is
+		 * Inode has inline data but PXT4_STATE_MAY_INLINE_DATA is
 		 * cleared. This means we are in the middle of moving of
 		 * inline data to delay allocated block. Just force writeout
 		 * here to finish conversion.
@@ -2037,7 +2037,7 @@ int pxt4_convert_inline_data(struct inode *inode)
 	if (error)
 		return error;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE, needed_blocks);
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE, needed_blocks);
 	if (IS_ERR(handle)) {
 		error = PTR_ERR(handle);
 		goto out_free;

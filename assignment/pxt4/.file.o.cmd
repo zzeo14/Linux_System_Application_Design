@@ -1,8 +1,8 @@
-cmd_fs/ext4/file.o := gcc -Wp,-MD,fs/ext4/.file.o.d  -nostdinc -isystem /usr/lib/gcc/x86_64-linux-gnu/9/include -I./arch/x86/include -I./arch/x86/include/generated  -I./include -I./arch/x86/include/uapi -I./arch/x86/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -fcf-protection=none -m64 -falign-jumps=1 -falign-loops=1 -mno-80387 -mno-fp-ret-in-387 -mpreferred-stack-boundary=3 -mskip-rax-setup -mtune=generic -mno-red-zone -mcmodel=kernel -DCONFIG_X86_X32_ABI -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -DCONFIG_AS_CFI_SECTIONS=1 -DCONFIG_AS_SSSE3=1 -DCONFIG_AS_AVX=1 -DCONFIG_AS_AVX2=1 -DCONFIG_AS_AVX512=1 -DCONFIG_AS_SHA1_NI=1 -DCONFIG_AS_SHA256_NI=1 -Wno-sign-compare -fno-asynchronous-unwind-tables -mindirect-branch=thunk-extern -mindirect-branch-register -fno-jump-tables -fno-delete-null-pointer-checks -Wno-frame-address -Wno-format-truncation -Wno-format-overflow -Wno-address-of-packed-member -O2 --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wimplicit-fallthrough -Wno-unused-but-set-variable -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -pg -mrecord-mcount -mfentry -DCC_USING_FENTRY -flive-patching=inline-clone -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-stringop-truncation -Wno-array-bounds -Wno-stringop-overflow -Wno-restrict -Wno-maybe-uninitialized -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init -fmacro-prefix-map=./= -Wno-packed-not-aligned    -fsanitize=shift  -fsanitize=integer-divide-by-zero  -fsanitize=unreachable  -fsanitize=signed-integer-overflow  -fsanitize=bounds  -fsanitize=object-size  -fsanitize=bool  -fsanitize=enum  -Wno-maybe-uninitialized    -DKBUILD_BASENAME='"file"' -DKBUILD_MODNAME='"ext4"' -c -o fs/ext4/file.o fs/ext4/file.c
+cmd_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o := gcc -Wp,-MD,/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/.file.o.d  -nostdinc -isystem /usr/lib/gcc/x86_64-linux-gnu/9/include -I./arch/x86/include -I./arch/x86/include/generated  -I./include -I./arch/x86/include/uapi -I./arch/x86/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -fcf-protection=none -m64 -falign-jumps=1 -falign-loops=1 -mno-80387 -mno-fp-ret-in-387 -mpreferred-stack-boundary=3 -mskip-rax-setup -mtune=generic -mno-red-zone -mcmodel=kernel -DCONFIG_X86_X32_ABI -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -DCONFIG_AS_CFI_SECTIONS=1 -DCONFIG_AS_SSSE3=1 -DCONFIG_AS_AVX=1 -DCONFIG_AS_AVX2=1 -DCONFIG_AS_AVX512=1 -DCONFIG_AS_SHA1_NI=1 -DCONFIG_AS_SHA256_NI=1 -Wno-sign-compare -fno-asynchronous-unwind-tables -mindirect-branch=thunk-extern -mindirect-branch-register -fno-jump-tables -fno-delete-null-pointer-checks -Wno-frame-address -Wno-format-truncation -Wno-format-overflow -Wno-address-of-packed-member -O2 --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wimplicit-fallthrough -Wno-unused-but-set-variable -Wno-unused-const-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -pg -mrecord-mcount -mfentry -DCC_USING_FENTRY -flive-patching=inline-clone -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-stringop-truncation -Wno-array-bounds -Wno-stringop-overflow -Wno-restrict -Wno-maybe-uninitialized -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init -fmacro-prefix-map=./= -Wno-packed-not-aligned    -fsanitize=shift  -fsanitize=integer-divide-by-zero  -fsanitize=unreachable  -fsanitize=signed-integer-overflow  -fsanitize=bounds  -fsanitize=object-size  -fsanitize=bool  -fsanitize=enum  -Wno-maybe-uninitialized  -DMODULE  -DKBUILD_BASENAME='"file"' -DKBUILD_MODNAME='"pxt4"' -c -o /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.c
 
-source_fs/ext4/file.o := fs/ext4/file.c
+source_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o := /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.c
 
-deps_fs/ext4/file.o := \
+deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o := \
     $(wildcard include/config/fs/dax.h) \
     $(wildcard include/config/compat.h) \
   include/linux/kconfig.h \
@@ -387,6 +387,11 @@ deps_fs/ext4/file.o := \
   arch/x86/include/asm/timex.h \
     $(wildcard include/config/x86/tsc.h) \
   arch/x86/include/asm/tsc.h \
+  include/linux/ktime.h \
+  include/linux/jiffies.h \
+  include/generated/timeconst.h \
+  include/linux/timekeeping.h \
+  include/linux/timekeeping32.h \
   include/linux/fs.h \
     $(wildcard include/config/read/only/thp/for/fs.h) \
     $(wildcard include/config/sysfs.h) \
@@ -536,11 +541,6 @@ deps_fs/ext4/file.o := \
     $(wildcard include/config/debug/objects/timers.h) \
     $(wildcard include/config/preempt/rt.h) \
     $(wildcard include/config/no/hz/common.h) \
-  include/linux/ktime.h \
-  include/linux/jiffies.h \
-  include/generated/timeconst.h \
-  include/linux/timekeeping.h \
-  include/linux/timekeeping32.h \
   include/linux/debugobjects.h \
     $(wildcard include/config/debug/objects.h) \
     $(wildcard include/config/debug/objects/free.h) \
@@ -958,13 +958,13 @@ deps_fs/ext4/file.o := \
   arch/x86/include/uapi/asm/mman.h \
   include/uapi/asm-generic/mman.h \
   include/uapi/asm-generic/mman-common.h \
-  fs/ext4/ext4.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/pxt4.h \
     $(wildcard include/config/unicode.h) \
   include/uapi/linux/magic.h \
-  include/linux/jbd2.h \
-    $(wildcard include/config/jbd2/debug.h) \
+  include/linux/jbd3.h \
+    $(wildcard include/config/jbd3/debug.h) \
   include/linux/buffer_head.h \
-  include/linux/journal-head.h \
+  include/linux/journal-head3.h \
   include/generated/uapi/linux/version.h \
   include/linux/sched/signal.h \
     $(wildcard include/config/sched/autogroup.h) \
@@ -1019,19 +1019,20 @@ deps_fs/ext4/file.o := \
   include/uapi/linux/fscrypt.h \
   include/linux/fsverity.h \
   include/uapi/linux/fsverity.h \
-  fs/ext4/extents_status.h \
-  fs/ext4/ext4_jbd2.h \
-  fs/ext4/xattr.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/extents_status.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/pxt4_jbd3.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/xattr.h \
     $(wildcard include/config/ext4/fs/security.h) \
   include/linux/xattr.h \
   include/uapi/linux/xattr.h \
-  fs/ext4/acl.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/acl.h \
     $(wildcard include/config/ext4/fs/posix/acl.h) \
   include/linux/posix_acl_xattr.h \
   include/uapi/linux/posix_acl_xattr.h \
   include/linux/posix_acl.h \
   include/uapi/linux/posix_acl.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/calclock.h \
 
-fs/ext4/file.o: $(deps_fs/ext4/file.o)
+/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o: $(deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o)
 
-$(deps_fs/ext4/file.o):
+$(deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o):

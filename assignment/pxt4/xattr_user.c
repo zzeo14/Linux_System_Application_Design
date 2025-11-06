@@ -25,7 +25,7 @@ pxt4_xattr_user_get(const struct xattr_handler *handler,
 {
 	if (!test_opt(inode->i_sb, XATTR_USER))
 		return -EOPNOTSUPP;
-	return pxt4_xattr_get(inode, EXT4_XATTR_INDEX_USER,
+	return pxt4_xattr_get(inode, PXT4_XATTR_INDEX_USER,
 			      name, buffer, size);
 }
 
@@ -37,7 +37,7 @@ pxt4_xattr_user_set(const struct xattr_handler *handler,
 {
 	if (!test_opt(inode->i_sb, XATTR_USER))
 		return -EOPNOTSUPP;
-	return pxt4_xattr_set(inode, EXT4_XATTR_INDEX_USER,
+	return pxt4_xattr_set(inode, PXT4_XATTR_INDEX_USER,
 			      name, value, size, flags);
 }
 

@@ -53,7 +53,7 @@
 static __u32 pxt4_inode_csum(struct inode *inode, struct pxt4_inode *raw,
 			      struct pxt4_inode_info *ei)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	__u32 csum;
 	__u16 dummy_csum = 0;
 	int offset = offsetof(struct pxt4_inode, i_checksum_lo);
@@ -63,20 +63,20 @@ static __u32 pxt4_inode_csum(struct inode *inode, struct pxt4_inode *raw,
 	csum = pxt4_chksum(sbi, csum, (__u8 *)&dummy_csum, csum_size);
 	offset += csum_size;
 	csum = pxt4_chksum(sbi, csum, (__u8 *)raw + offset,
-			   EXT4_GOOD_OLD_INODE_SIZE - offset);
+			   PXT4_GOOD_OLD_INODE_SIZE - offset);
 
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE) {
 		offset = offsetof(struct pxt4_inode, i_checksum_hi);
 		csum = pxt4_chksum(sbi, csum, (__u8 *)raw +
-				   EXT4_GOOD_OLD_INODE_SIZE,
-				   offset - EXT4_GOOD_OLD_INODE_SIZE);
-		if (EXT4_FITS_IN_INODE(raw, ei, i_checksum_hi)) {
+				   PXT4_GOOD_OLD_INODE_SIZE,
+				   offset - PXT4_GOOD_OLD_INODE_SIZE);
+		if (PXT4_FITS_IN_INODE(raw, ei, i_checksum_hi)) {
 			csum = pxt4_chksum(sbi, csum, (__u8 *)&dummy_csum,
 					   csum_size);
 			offset += csum_size;
 		}
 		csum = pxt4_chksum(sbi, csum, (__u8 *)raw + offset,
-				   EXT4_INODE_SIZE(inode->i_sb) - offset);
+				   PXT4_INODE_SIZE(inode->i_sb) - offset);
 	}
 
 	return csum;
@@ -87,15 +87,15 @@ static int pxt4_inode_csum_verify(struct inode *inode, struct pxt4_inode *raw,
 {
 	__u32 provided, calculated;
 
-	if (EXT4_SB(inode->i_sb)->s_es->s_creator_os !=
-	    cpu_to_le32(EXT4_OS_LINUX) ||
+	if (PXT4_SB(inode->i_sb)->s_es->s_creator_os !=
+	    cpu_to_le32(PXT4_OS_LINUX) ||
 	    !pxt4_has_metadata_csum(inode->i_sb))
 		return 1;
 
 	provided = le16_to_cpu(raw->i_checksum_lo);
 	calculated = pxt4_inode_csum(inode, raw, ei);
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE &&
-	    EXT4_FITS_IN_INODE(raw, ei, i_checksum_hi))
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE &&
+	    PXT4_FITS_IN_INODE(raw, ei, i_checksum_hi))
 		provided |= ((__u32)le16_to_cpu(raw->i_checksum_hi)) << 16;
 	else
 		calculated &= 0xFFFF;
@@ -108,15 +108,15 @@ static void pxt4_inode_csum_set(struct inode *inode, struct pxt4_inode *raw,
 {
 	__u32 csum;
 
-	if (EXT4_SB(inode->i_sb)->s_es->s_creator_os !=
-	    cpu_to_le32(EXT4_OS_LINUX) ||
+	if (PXT4_SB(inode->i_sb)->s_es->s_creator_os !=
+	    cpu_to_le32(PXT4_OS_LINUX) ||
 	    !pxt4_has_metadata_csum(inode->i_sb))
 		return;
 
 	csum = pxt4_inode_csum(inode, raw, ei);
 	raw->i_checksum_lo = cpu_to_le16(csum & 0xFFFF);
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE &&
-	    EXT4_FITS_IN_INODE(raw, ei, i_checksum_hi))
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE &&
+	    PXT4_FITS_IN_INODE(raw, ei, i_checksum_hi))
 		raw->i_checksum_hi = cpu_to_le16(csum >> 16);
 }
 
@@ -130,10 +130,10 @@ static inline int pxt4_begin_ordered_truncate(struct inode *inode,
 	 * jbd3_journal_begin_ordered_truncate() since there's no
 	 * outstanding writes we need to flush.
 	 */
-	if (!EXT4_I(inode)->jinode)
+	if (!PXT4_I(inode)->jinode)
 		return 0;
-	return jbd3_journal_begin_ordered_truncate(EXT4_JOURNAL(inode),
-						   EXT4_I(inode)->jinode,
+	return jbd3_journal_begin_ordered_truncate(PXT4_JOURNAL(inode),
+						   PXT4_I(inode)->jinode,
 						   new_size);
 }
 
@@ -150,9 +150,9 @@ static int pxt4_meta_trans_blocks(struct inode *inode, int lblocks,
  */
 int pxt4_inode_is_fast_symlink(struct inode *inode)
 {
-	if (!(EXT4_I(inode)->i_flags & EXT4_EA_INODE_FL)) {
-		int ea_blocks = EXT4_I(inode)->i_file_acl ?
-				EXT4_CLUSTER_SIZE(inode->i_sb) >> 9 : 0;
+	if (!(PXT4_I(inode)->i_flags & PXT4_EA_INODE_FL)) {
+		int ea_blocks = PXT4_I(inode)->i_file_acl ?
+				PXT4_CLUSTER_SIZE(inode->i_sb) >> 9 : 0;
 
 		if (pxt4_has_inline_data(inode))
 			return 0;
@@ -160,7 +160,7 @@ int pxt4_inode_is_fast_symlink(struct inode *inode)
 		return (S_ISLNK(inode->i_mode) && inode->i_blocks - ea_blocks == 0);
 	}
 	return S_ISLNK(inode->i_mode) && inode->i_size &&
-	       (inode->i_size < EXT4_N_BLOCKS * 4);
+	       (inode->i_size < PXT4_N_BLOCKS * 4);
 }
 
 /*
@@ -179,11 +179,11 @@ int pxt4_truncate_restart_trans(handle_t *handle, struct inode *inode,
 	 * page cache has been already dropped and writes are blocked by
 	 * i_mutex. So we can safely drop the i_data_sem here.
 	 */
-	BUG_ON(EXT4_JOURNAL(inode) == NULL);
+	BUG_ON(PXT4_JOURNAL(inode) == NULL);
 	jbd_debug(2, "restarting handle %p\n", handle);
-	up_write(&EXT4_I(inode)->i_data_sem);
+	up_write(&PXT4_I(inode)->i_data_sem);
 	ret = pxt4_journal_restart(handle, nblocks);
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 	pxt4_discard_preallocations(inode);
 
 	return ret;
@@ -226,12 +226,12 @@ void pxt4_evict_inode(struct inode *inode)
 		 * Note that directories do not have this problem because they
 		 * don't use page cache.
 		 */
-		if (inode->i_ino != EXT4_JOURNAL_INO &&
+		if (inode->i_ino != PXT4_JOURNAL_INO &&
 		    pxt4_should_journal_data(inode) &&
 		    (S_ISLNK(inode->i_mode) || S_ISREG(inode->i_mode)) &&
 		    inode->i_data.nrpages) {
-			journal_t *journal = EXT4_SB(inode->i_sb)->s_journal;
-			tid_t commit_tid = EXT4_I(inode)->i_datasync_tid;
+			journal_t *journal = PXT4_SB(inode->i_sb)->s_journal;
+			tid_t commit_tid = PXT4_I(inode)->i_datasync_tid;
 
 			jbd3_complete_transaction(journal, commit_tid);
 			filemap_write_and_wait(&inode->i_data);
@@ -261,13 +261,13 @@ void pxt4_evict_inode(struct inode *inode)
 	}
 
 	if (!IS_NOQUOTA(inode))
-		extra_credits += EXT4_MAXQUOTAS_DEL_BLOCKS(inode->i_sb);
+		extra_credits += PXT4_MAXQUOTAS_DEL_BLOCKS(inode->i_sb);
 
 	/*
 	 * Block bitmap, group descriptor, and inode are accounted in both
 	 * pxt4_blocks_for_truncate() and extra_credits. So subtract 3.
 	 */
-	handle = pxt4_journal_start(inode, EXT4_HT_TRUNCATE,
+	handle = pxt4_journal_start(inode, PXT4_HT_TRUNCATE,
 			 pxt4_blocks_for_truncate(inode) + extra_credits - 3);
 	if (IS_ERR(handle)) {
 		pxt4_std_error(inode->i_sb, PTR_ERR(handle));
@@ -293,7 +293,7 @@ void pxt4_evict_inode(struct inode *inode)
 	 * status. Erase i_data so that it becomes a valid empty block map.
 	 */
 	if (pxt4_inode_is_fast_symlink(inode))
-		memset(EXT4_I(inode)->i_data, 0, sizeof(EXT4_I(inode)->i_data));
+		memset(PXT4_I(inode)->i_data, 0, sizeof(PXT4_I(inode)->i_data));
 	inode->i_size = 0;
 	err = pxt4_mark_inode_dirty(handle, inode);
 	if (err) {
@@ -334,7 +334,7 @@ stop_handle:
 	 * (Well, we could do this if we need to, but heck - it works)
 	 */
 	pxt4_orphan_del(handle, inode);
-	EXT4_I(inode)->i_dtime	= (__u32)ktime_get_real_seconds();
+	PXT4_I(inode)->i_dtime	= (__u32)ktime_get_real_seconds();
 
 	/*
 	 * One subtle ordering requirement: if anything has gone wrong
@@ -360,7 +360,7 @@ no_delete:
 #ifdef CONFIG_QUOTA
 qsize_t *pxt4_get_reserved_space(struct inode *inode)
 {
-	return &EXT4_I(inode)->i_reserved_quota;
+	return &PXT4_I(inode)->i_reserved_quota;
 }
 #endif
 
@@ -371,8 +371,8 @@ qsize_t *pxt4_get_reserved_space(struct inode *inode)
 void pxt4_da_update_reserve_space(struct inode *inode,
 					int used, int quota_claim)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
 	spin_lock(&ei->i_block_reservation_lock);
 	trace_pxt4_da_update_reserve_space(inode, used, quota_claim);
@@ -389,18 +389,18 @@ void pxt4_da_update_reserve_space(struct inode *inode,
 	ei->i_reserved_data_blocks -= used;
 	percpu_counter_sub(&sbi->s_dirtyclusters_counter, used);
 
-	spin_unlock(&EXT4_I(inode)->i_block_reservation_lock);
+	spin_unlock(&PXT4_I(inode)->i_block_reservation_lock);
 
 	/* Update quota subsystem for data blocks */
 	if (quota_claim)
-		dquot_claim_block(inode, EXT4_C2B(sbi, used));
+		dquot_claim_block(inode, PXT4_C2B(sbi, used));
 	else {
 		/*
 		 * We did fallocate with an offset that is already delayed
 		 * allocated. So on delayed allocated writeback we should
 		 * not re-claim the quota for fallocated blocks.
 		 */
-		dquot_release_reservation_block(inode, EXT4_C2B(sbi, used));
+		dquot_release_reservation_block(inode, PXT4_C2B(sbi, used));
 	}
 
 	/*
@@ -419,9 +419,9 @@ static int __check_block_validity(struct inode *inode, const char *func,
 {
 	if (pxt4_has_feature_journal(inode->i_sb) &&
 	    (inode->i_ino ==
-	     le32_to_cpu(EXT4_SB(inode->i_sb)->s_es->s_journal_inum)))
+	     le32_to_cpu(PXT4_SB(inode->i_sb)->s_es->s_journal_inum)))
 		return 0;
-	if (!pxt4_data_block_valid(EXT4_SB(inode->i_sb), map->m_pblk,
+	if (!pxt4_data_block_valid(PXT4_SB(inode->i_sb), map->m_pblk,
 				   map->m_len)) {
 		pxt4_error_inode(inode, func, line, map->m_pblk,
 				 "lblock %lu mapped to illegal pblock %llu "
@@ -467,15 +467,15 @@ static void pxt4_map_blocks_es_recheck(handle_t *handle,
 	 * out taking i_data_sem.  So at the time the unwritten extent
 	 * could be converted.
 	 */
-	down_read(&EXT4_I(inode)->i_data_sem);
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
+	down_read(&PXT4_I(inode)->i_data_sem);
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)) {
 		retval = pxt4_ext_map_blocks(handle, inode, map, flags &
-					     EXT4_GET_BLOCKS_KEEP_SIZE);
+					     PXT4_GET_BLOCKS_KEEP_SIZE);
 	} else {
 		retval = pxt4_ind_map_blocks(handle, inode, map, flags &
-					     EXT4_GET_BLOCKS_KEEP_SIZE);
+					     PXT4_GET_BLOCKS_KEEP_SIZE);
 	}
-	up_read((&EXT4_I(inode)->i_data_sem));
+	up_read((&PXT4_I(inode)->i_data_sem));
 
 	/*
 	 * We don't check m_len because extent will be collpased in status
@@ -550,7 +550,7 @@ int pxt4_map_blocks(handle_t *handle, struct inode *inode,
 			map->m_pblk = pxt4_es_pblock(&es) +
 					map->m_lblk - es.es_lblk;
 			map->m_flags |= pxt4_es_is_written(&es) ?
-					EXT4_MAP_MAPPED : EXT4_MAP_UNWRITTEN;
+					PXT4_MAP_MAPPED : PXT4_MAP_UNWRITTEN;
 			retval = es.es_len - (map->m_lblk - es.es_lblk);
 			if (retval > map->m_len)
 				retval = map->m_len;
@@ -576,13 +576,13 @@ int pxt4_map_blocks(handle_t *handle, struct inode *inode,
 	 * Try to see if we can get the block without requesting a new
 	 * file system block.
 	 */
-	down_read(&EXT4_I(inode)->i_data_sem);
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
+	down_read(&PXT4_I(inode)->i_data_sem);
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)) {
 		retval = pxt4_ext_map_blocks(handle, inode, map, flags &
-					     EXT4_GET_BLOCKS_KEEP_SIZE);
+					     PXT4_GET_BLOCKS_KEEP_SIZE);
 	} else {
 		retval = pxt4_ind_map_blocks(handle, inode, map, flags &
-					     EXT4_GET_BLOCKS_KEEP_SIZE);
+					     PXT4_GET_BLOCKS_KEEP_SIZE);
 	}
 	if (retval > 0) {
 		unsigned int status;
@@ -595,9 +595,9 @@ int pxt4_map_blocks(handle_t *handle, struct inode *inode,
 			WARN_ON(1);
 		}
 
-		status = map->m_flags & EXT4_MAP_UNWRITTEN ?
+		status = map->m_flags & PXT4_MAP_UNWRITTEN ?
 				EXTENT_STATUS_UNWRITTEN : EXTENT_STATUS_WRITTEN;
-		if (!(flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE) &&
+		if (!(flags & PXT4_GET_BLOCKS_DELALLOC_RESERVE) &&
 		    !(status & EXTENT_STATUS_WRITTEN) &&
 		    pxt4_es_scan_range(inode, &pxt4_es_is_delayed, map->m_lblk,
 				       map->m_lblk + map->m_len - 1))
@@ -607,17 +607,17 @@ int pxt4_map_blocks(handle_t *handle, struct inode *inode,
 		if (ret < 0)
 			retval = ret;
 	}
-	up_read((&EXT4_I(inode)->i_data_sem));
+	up_read((&PXT4_I(inode)->i_data_sem));
 
 found:
-	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
+	if (retval > 0 && map->m_flags & PXT4_MAP_MAPPED) {
 		ret = check_block_validity(inode, map);
 		if (ret != 0)
 			return ret;
 	}
 
 	/* If it is only a block(s) look up */
-	if ((flags & EXT4_GET_BLOCKS_CREATE) == 0)
+	if ((flags & PXT4_GET_BLOCKS_CREATE) == 0)
 		return retval;
 
 	/*
@@ -627,20 +627,20 @@ found:
 	 * pxt4_ext_get_block() returns the create = 0
 	 * with buffer head unmapped.
 	 */
-	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED)
+	if (retval > 0 && map->m_flags & PXT4_MAP_MAPPED)
 		/*
 		 * If we need to convert extent to unwritten
 		 * we continue and do the actual work in
 		 * pxt4_ext_map_blocks()
 		 */
-		if (!(flags & EXT4_GET_BLOCKS_CONVERT_UNWRITTEN))
+		if (!(flags & PXT4_GET_BLOCKS_CONVERT_UNWRITTEN))
 			return retval;
 
 	/*
 	 * Here we clear m_flags because after allocating an new extent,
 	 * it will be set again.
 	 */
-	map->m_flags &= ~EXT4_MAP_FLAGS;
+	map->m_flags &= ~PXT4_MAP_FLAGS;
 
 	/*
 	 * New blocks allocate and/or writing to unwritten extent
@@ -648,24 +648,24 @@ found:
 	 * the write lock of i_data_sem, and call get_block()
 	 * with create == 1 flag.
 	 */
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 
 	/*
-	 * We need to check for EXT4 here because migrate
+	 * We need to check for PXT4 here because migrate
 	 * could have changed the inode type in between
 	 */
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)) {
 		retval = pxt4_ext_map_blocks(handle, inode, map, flags);
 	} else {
 		retval = pxt4_ind_map_blocks(handle, inode, map, flags);
 
-		if (retval > 0 && map->m_flags & EXT4_MAP_NEW) {
+		if (retval > 0 && map->m_flags & PXT4_MAP_NEW) {
 			/*
 			 * We allocated new blocks which will result in
 			 * i_data's format changing.  Force the migrate
 			 * to fail by clearing migrate flags
 			 */
-			pxt4_clear_inode_state(inode, EXT4_STATE_EXT_MIGRATE);
+			pxt4_clear_inode_state(inode, PXT4_STATE_EXT_MIGRATE);
 		}
 
 		/*
@@ -675,7 +675,7 @@ found:
 		 * reserve space here.
 		 */
 		if ((retval > 0) &&
-			(flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE))
+			(flags & PXT4_GET_BLOCKS_DELALLOC_RESERVE))
 			pxt4_da_update_reserve_space(inode, retval, 1);
 	}
 
@@ -697,9 +697,9 @@ found:
 		 * unmap metadata before zeroing as otherwise writeback can
 		 * overwrite zeros with stale data from block device.
 		 */
-		if (flags & EXT4_GET_BLOCKS_ZERO &&
-		    map->m_flags & EXT4_MAP_MAPPED &&
-		    map->m_flags & EXT4_MAP_NEW) {
+		if (flags & PXT4_GET_BLOCKS_ZERO &&
+		    map->m_flags & PXT4_MAP_MAPPED &&
+		    map->m_flags & PXT4_MAP_NEW) {
 			ret = pxt4_issue_zeroout(inode, map->m_lblk,
 						 map->m_pblk, map->m_len);
 			if (ret) {
@@ -712,14 +712,14 @@ found:
 		 * If the extent has been zeroed out, we don't need to update
 		 * extent status tree.
 		 */
-		if ((flags & EXT4_GET_BLOCKS_PRE_IO) &&
+		if ((flags & PXT4_GET_BLOCKS_PRE_IO) &&
 		    pxt4_es_lookup_extent(inode, map->m_lblk, NULL, &es)) {
 			if (pxt4_es_is_written(&es))
 				goto out_sem;
 		}
-		status = map->m_flags & EXT4_MAP_UNWRITTEN ?
+		status = map->m_flags & PXT4_MAP_UNWRITTEN ?
 				EXTENT_STATUS_UNWRITTEN : EXTENT_STATUS_WRITTEN;
-		if (!(flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE) &&
+		if (!(flags & PXT4_GET_BLOCKS_DELALLOC_RESERVE) &&
 		    !(status & EXTENT_STATUS_WRITTEN) &&
 		    pxt4_es_scan_range(inode, &pxt4_es_is_delayed, map->m_lblk,
 				       map->m_lblk + map->m_len - 1))
@@ -733,8 +733,8 @@ found:
 	}
 
 out_sem:
-	up_write((&EXT4_I(inode)->i_data_sem));
-	if (retval > 0 && map->m_flags & EXT4_MAP_MAPPED) {
+	up_write((&PXT4_I(inode)->i_data_sem));
+	if (retval > 0 && map->m_flags & PXT4_MAP_MAPPED) {
 		ret = check_block_validity(inode, map);
 		if (ret != 0)
 			return ret;
@@ -744,16 +744,16 @@ out_sem:
 		 * visible after transaction commit must be on transaction's
 		 * ordered data list.
 		 */
-		if (map->m_flags & EXT4_MAP_NEW &&
-		    !(map->m_flags & EXT4_MAP_UNWRITTEN) &&
-		    !(flags & EXT4_GET_BLOCKS_ZERO) &&
+		if (map->m_flags & PXT4_MAP_NEW &&
+		    !(map->m_flags & PXT4_MAP_UNWRITTEN) &&
+		    !(flags & PXT4_GET_BLOCKS_ZERO) &&
 		    !pxt4_is_quota_file(inode) &&
 		    pxt4_should_order_data(inode)) {
 			loff_t start_byte =
 				(loff_t)map->m_lblk << inode->i_blkbits;
 			loff_t length = (loff_t)map->m_len << inode->i_blkbits;
 
-			if (flags & EXT4_GET_BLOCKS_IO_SUBMIT)
+			if (flags & PXT4_GET_BLOCKS_IO_SUBMIT)
 				ret = pxt4_jbd3_inode_add_wait(handle, inode,
 						start_byte, length);
 			else
@@ -767,7 +767,7 @@ out_sem:
 }
 
 /*
- * Update EXT4_MAP_FLAGS in bh->b_state. For buffer heads attached to pages
+ * Update PXT4_MAP_FLAGS in bh->b_state. For buffer heads attached to pages
  * we have to be careful as someone else may be manipulating b_state as well.
  */
 static void pxt4_update_bh_state(struct buffer_head *bh, unsigned long flags)
@@ -775,11 +775,11 @@ static void pxt4_update_bh_state(struct buffer_head *bh, unsigned long flags)
 	unsigned long old_state;
 	unsigned long new_state;
 
-	flags &= EXT4_MAP_FLAGS;
+	flags &= PXT4_MAP_FLAGS;
 
 	/* Dummy buffer_head? Set non-atomically. */
 	if (!bh->b_page) {
-		bh->b_state = (bh->b_state & ~EXT4_MAP_FLAGS) | flags;
+		bh->b_state = (bh->b_state & ~PXT4_MAP_FLAGS) | flags;
 		return;
 	}
 	/*
@@ -789,7 +789,7 @@ static void pxt4_update_bh_state(struct buffer_head *bh, unsigned long flags)
 	 */
 	do {
 		old_state = READ_ONCE(bh->b_state);
-		new_state = (old_state & ~EXT4_MAP_FLAGS) | flags;
+		new_state = (old_state & ~PXT4_MAP_FLAGS) | flags;
 	} while (unlikely(
 		 cmpxchg(&bh->b_state, old_state, new_state) != old_state));
 }
@@ -824,7 +824,7 @@ int pxt4_get_block(struct inode *inode, sector_t iblock,
 		   struct buffer_head *bh, int create)
 {
 	return _pxt4_get_block(inode, iblock, bh,
-			       create ? EXT4_GET_BLOCKS_CREATE : 0);
+			       create ? PXT4_GET_BLOCKS_CREATE : 0);
 }
 
 /*
@@ -838,7 +838,7 @@ int pxt4_get_block_unwritten(struct inode *inode, sector_t iblock,
 	pxt4_debug("pxt4_get_block_unwritten: inode %lu, create flag %d\n",
 		   inode->i_ino, create);
 	return _pxt4_get_block(inode, iblock, bh_result,
-			       EXT4_GET_BLOCKS_IO_CREATE_EXT);
+			       PXT4_GET_BLOCKS_IO_CREATE_EXT);
 }
 
 /* Maximum number of blocks we map for direct IO at once. */
@@ -863,7 +863,7 @@ static int pxt4_get_block_trans(struct inode *inode, sector_t iblock,
 	dio_credits = pxt4_chunk_trans_blocks(inode,
 				      bh_result->b_size >> inode->i_blkbits);
 retry:
-	handle = pxt4_journal_start(inode, EXT4_HT_MAP_BLOCKS, dio_credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_MAP_BLOCKS, dio_credits);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -884,7 +884,7 @@ int pxt4_dio_get_block(struct inode *inode, sector_t iblock,
 
 	if (!create)
 		return _pxt4_get_block(inode, iblock, bh, 0);
-	return pxt4_get_block_trans(inode, iblock, bh, EXT4_GET_BLOCKS_CREATE);
+	return pxt4_get_block_trans(inode, iblock, bh, PXT4_GET_BLOCKS_CREATE);
 }
 
 /*
@@ -901,7 +901,7 @@ static int pxt4_dio_get_block_unwritten_async(struct inode *inode,
 	WARN_ON_ONCE(pxt4_journal_current_handle());
 
 	ret = pxt4_get_block_trans(inode, iblock, bh_result,
-				   EXT4_GET_BLOCKS_IO_CREATE_EXT);
+				   PXT4_GET_BLOCKS_IO_CREATE_EXT);
 
 	/*
 	 * When doing DIO using unwritten extents, we need io_end to convert
@@ -940,7 +940,7 @@ static int pxt4_dio_get_block_unwritten_sync(struct inode *inode,
 	WARN_ON_ONCE(pxt4_journal_current_handle());
 
 	ret = pxt4_get_block_trans(inode, iblock, bh_result,
-				   EXT4_GET_BLOCKS_IO_CREATE_EXT);
+				   PXT4_GET_BLOCKS_IO_CREATE_EXT);
 
 	/*
 	 * Mark inode as having pending DIO writes to unwritten extents.
@@ -948,7 +948,7 @@ static int pxt4_dio_get_block_unwritten_sync(struct inode *inode,
 	 * written.
 	 */
 	if (!ret && buffer_unwritten(bh_result))
-		pxt4_set_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN);
+		pxt4_set_inode_state(inode, PXT4_STATE_DIO_UNWRITTEN);
 
 	return ret;
 }
@@ -982,7 +982,7 @@ struct buffer_head *pxt4_getblk(handle_t *handle, struct inode *inode,
 {
 	struct pxt4_map_blocks map;
 	struct buffer_head *bh;
-	int create = map_flags & EXT4_GET_BLOCKS_CREATE;
+	int create = map_flags & PXT4_GET_BLOCKS_CREATE;
 	int err;
 
 	J_ASSERT(handle != NULL || create == 0);
@@ -999,7 +999,7 @@ struct buffer_head *pxt4_getblk(handle_t *handle, struct inode *inode,
 	bh = sb_getblk(inode->i_sb, map.m_pblk);
 	if (unlikely(!bh))
 		return ERR_PTR(-ENOMEM);
-	if (map.m_flags & EXT4_MAP_NEW) {
+	if (map.m_flags & PXT4_MAP_NEW) {
 		J_ASSERT(create != 0);
 		J_ASSERT(handle != NULL);
 
@@ -1284,7 +1284,7 @@ static int pxt4_write_begin(struct file *file, struct address_space *mapping,
 	pgoff_t index;
 	unsigned from, to;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	trace_pxt4_write_begin(inode, pos, len, flags);
@@ -1297,7 +1297,7 @@ static int pxt4_write_begin(struct file *file, struct address_space *mapping,
 	from = pos & (PAGE_SIZE - 1);
 	to = from + len;
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+	if (pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA)) {
 		ret = pxt4_try_to_write_inline_data(mapping, inode, pos, len,
 						    flags, pagep);
 		if (ret < 0)
@@ -1320,7 +1320,7 @@ retry_grab:
 	unlock_page(page);
 
 retry_journal:
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE, needed_blocks);
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE, needed_blocks);
 	if (IS_ERR(handle)) {
 		put_page(page);
 		return PTR_ERR(handle);
@@ -1572,8 +1572,8 @@ static int pxt4_journalled_write_end(struct file *file,
 	}
 	if (!verity)
 		size_changed = pxt4_update_inode_size(inode, pos + copied);
-	pxt4_set_inode_state(inode, EXT4_STATE_JDATA);
-	EXT4_I(inode)->i_datasync_tid = handle->h_transaction->t_tid;
+	pxt4_set_inode_state(inode, PXT4_STATE_JDATA);
+	PXT4_I(inode)->i_datasync_tid = handle->h_transaction->t_tid;
 	unlock_page(page);
 	put_page(page);
 
@@ -1616,8 +1616,8 @@ errout:
  */
 static int pxt4_da_reserve_space(struct inode *inode)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	int ret;
 
 	/*
@@ -1625,14 +1625,14 @@ static int pxt4_da_reserve_space(struct inode *inode)
 	 * us from metadata over-estimation, though we may go over by
 	 * a small amount in the end.  Here we just reserve for data.
 	 */
-	ret = dquot_reserve_block(inode, EXT4_C2B(sbi, 1));
+	ret = dquot_reserve_block(inode, PXT4_C2B(sbi, 1));
 	if (ret)
 		return ret;
 
 	spin_lock(&ei->i_block_reservation_lock);
 	if (pxt4_claim_free_clusters(sbi, 1, 0)) {
 		spin_unlock(&ei->i_block_reservation_lock);
-		dquot_release_reservation_block(inode, EXT4_C2B(sbi, 1));
+		dquot_release_reservation_block(inode, PXT4_C2B(sbi, 1));
 		return -ENOSPC;
 	}
 	ei->i_reserved_data_blocks++;
@@ -1644,13 +1644,13 @@ static int pxt4_da_reserve_space(struct inode *inode)
 
 void pxt4_da_release_space(struct inode *inode, int to_free)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
 	if (!to_free)
 		return;		/* Nothing to release, exit */
 
-	spin_lock(&EXT4_I(inode)->i_block_reservation_lock);
+	spin_lock(&PXT4_I(inode)->i_block_reservation_lock);
 
 	trace_pxt4_da_release_space(inode, to_free);
 	if (unlikely(to_free > ei->i_reserved_data_blocks)) {
@@ -1672,9 +1672,9 @@ void pxt4_da_release_space(struct inode *inode, int to_free)
 	/* update fs dirty data blocks counter */
 	percpu_counter_sub(&sbi->s_dirtyclusters_counter, to_free);
 
-	spin_unlock(&EXT4_I(inode)->i_block_reservation_lock);
+	spin_unlock(&PXT4_I(inode)->i_block_reservation_lock);
 
-	dquot_release_reservation_block(inode, EXT4_C2B(sbi, to_free));
+	dquot_release_reservation_block(inode, PXT4_C2B(sbi, to_free));
 }
 
 /*
@@ -1722,9 +1722,9 @@ static void mpage_release_unused_pages(struct mpage_da_data *mpd,
 		 * avoid racing with extent status tree scans made by
 		 * pxt4_insert_delayed_block()
 		 */
-		down_write(&EXT4_I(inode)->i_data_sem);
+		down_write(&PXT4_I(inode)->i_data_sem);
 		pxt4_es_remove_extent(inode, start, last - start + 1);
-		up_write(&EXT4_I(inode)->i_data_sem);
+		up_write(&PXT4_I(inode)->i_data_sem);
 	}
 
 	pagevec_init(&pvec);
@@ -1751,19 +1751,19 @@ static void mpage_release_unused_pages(struct mpage_da_data *mpd,
 
 static void pxt4_print_free_blocks(struct inode *inode)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	struct super_block *sb = inode->i_sb;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 
 	pxt4_msg(sb, KERN_CRIT, "Total free blocks count %lld",
-	       EXT4_C2B(EXT4_SB(inode->i_sb),
+	       PXT4_C2B(PXT4_SB(inode->i_sb),
 			pxt4_count_free_clusters(sb)));
 	pxt4_msg(sb, KERN_CRIT, "Free/Dirty block details");
 	pxt4_msg(sb, KERN_CRIT, "free_blocks=%lld",
-	       (long long) EXT4_C2B(EXT4_SB(sb),
+	       (long long) PXT4_C2B(PXT4_SB(sb),
 		percpu_counter_sum(&sbi->s_freeclusters_counter)));
 	pxt4_msg(sb, KERN_CRIT, "dirty_blocks=%lld",
-	       (long long) EXT4_C2B(EXT4_SB(sb),
+	       (long long) PXT4_C2B(PXT4_SB(sb),
 		percpu_counter_sum(&sbi->s_dirtyclusters_counter)));
 	pxt4_msg(sb, KERN_CRIT, "Block reservation details");
 	pxt4_msg(sb, KERN_CRIT, "i_reserved_data_blocks=%u",
@@ -1789,7 +1789,7 @@ static int pxt4_bh_delay_or_unwritten(handle_t *handle, struct buffer_head *bh)
  */
 static int pxt4_insert_delayed_block(struct inode *inode, pxt4_lblk_t lblk)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	int ret;
 	bool allocated = false;
 	bool reserved = false;
@@ -1815,7 +1815,7 @@ static int pxt4_insert_delayed_block(struct inode *inode, pxt4_lblk_t lblk)
 			if (!pxt4_es_scan_clu(inode,
 					      &pxt4_es_is_mapped, lblk)) {
 				ret = pxt4_clu_mapped(inode,
-						      EXT4_B2C(sbi, lblk));
+						      PXT4_B2C(sbi, lblk));
 				if (ret < 0)
 					goto errout;
 				if (ret == 0) {
@@ -1859,7 +1859,7 @@ static int pxt4_da_map_blocks(struct inode *inode, sector_t iblock,
 	memcpy(&orig_map, map, sizeof(*map));
 #endif
 
-	if (invalid_block < pxt4_blocks_count(EXT4_SB(inode->i_sb)->s_es))
+	if (invalid_block < pxt4_blocks_count(PXT4_SB(inode->i_sb)->s_es))
 		invalid_block = ~0;
 
 	map->m_flags = 0;
@@ -1871,7 +1871,7 @@ static int pxt4_da_map_blocks(struct inode *inode, sector_t iblock,
 	if (pxt4_es_lookup_extent(inode, iblock, NULL, &es)) {
 		if (pxt4_es_is_hole(&es)) {
 			retval = 0;
-			down_read(&EXT4_I(inode)->i_data_sem);
+			down_read(&PXT4_I(inode)->i_data_sem);
 			goto add_delayed;
 		}
 
@@ -1892,9 +1892,9 @@ static int pxt4_da_map_blocks(struct inode *inode, sector_t iblock,
 			retval = map->m_len;
 		map->m_len = retval;
 		if (pxt4_es_is_written(&es))
-			map->m_flags |= EXT4_MAP_MAPPED;
+			map->m_flags |= PXT4_MAP_MAPPED;
 		else if (pxt4_es_is_unwritten(&es))
-			map->m_flags |= EXT4_MAP_UNWRITTEN;
+			map->m_flags |= PXT4_MAP_UNWRITTEN;
 		else
 			BUG();
 
@@ -1908,10 +1908,10 @@ static int pxt4_da_map_blocks(struct inode *inode, sector_t iblock,
 	 * Try to see if we can get the block without requesting a new
 	 * file system block.
 	 */
-	down_read(&EXT4_I(inode)->i_data_sem);
+	down_read(&PXT4_I(inode)->i_data_sem);
 	if (pxt4_has_inline_data(inode))
 		retval = 0;
-	else if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	else if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 		retval = pxt4_ext_map_blocks(NULL, inode, map, 0);
 	else
 		retval = pxt4_ind_map_blocks(NULL, inode, map, 0);
@@ -1946,7 +1946,7 @@ add_delayed:
 			WARN_ON(1);
 		}
 
-		status = map->m_flags & EXT4_MAP_UNWRITTEN ?
+		status = map->m_flags & PXT4_MAP_UNWRITTEN ?
 				EXTENT_STATUS_UNWRITTEN : EXTENT_STATUS_WRITTEN;
 		ret = pxt4_es_insert_extent(inode, map->m_lblk, map->m_len,
 					    map->m_pblk, status);
@@ -1955,7 +1955,7 @@ add_delayed:
 	}
 
 out_unlock:
-	up_read((&EXT4_I(inode)->i_data_sem));
+	up_read((&PXT4_I(inode)->i_data_sem));
 
 	return retval;
 }
@@ -2057,7 +2057,7 @@ static int __pxt4_journalled_writepage(struct page *page,
 	get_page(page);
 	unlock_page(page);
 
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE,
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE,
 				    pxt4_writepage_trans_blocks(inode));
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
@@ -2086,12 +2086,12 @@ static int __pxt4_journalled_writepage(struct page *page,
 	}
 	if (ret == 0)
 		ret = err;
-	EXT4_I(inode)->i_datasync_tid = handle->h_transaction->t_tid;
+	PXT4_I(inode)->i_datasync_tid = handle->h_transaction->t_tid;
 	err = pxt4_journal_stop(handle);
 	if (!ret)
 		ret = err;
 
-	pxt4_set_inode_state(inode, EXT4_STATE_JDATA);
+	pxt4_set_inode_state(inode, PXT4_STATE_JDATA);
 out:
 	unlock_page(page);
 out_no_pagelock:
@@ -2154,7 +2154,7 @@ static int pxt4_writepage(struct page *page,
 	struct pxt4_io_submit io_submit;
 	bool keep_towrite = false;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb)))) {
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb)))) {
 		inode->i_mapping->a_ops->invalidatepage(page, 0, PAGE_SIZE);
 		unlock_page(page);
 		return -EIO;
@@ -2493,24 +2493,24 @@ static int mpage_map_one_extent(handle_t *handle, struct mpage_da_data *mpd)
 	 * in data loss.  So use reserved blocks to allocate metadata if
 	 * possible.
 	 *
-	 * We pass in the magic EXT4_GET_BLOCKS_DELALLOC_RESERVE if
+	 * We pass in the magic PXT4_GET_BLOCKS_DELALLOC_RESERVE if
 	 * the blocks in question are delalloc blocks.  This indicates
 	 * that the blocks and quotas has already been checked when
 	 * the data was copied into the page cache.
 	 */
-	get_blocks_flags = EXT4_GET_BLOCKS_CREATE |
-			   EXT4_GET_BLOCKS_METADATA_NOFAIL |
-			   EXT4_GET_BLOCKS_IO_SUBMIT;
+	get_blocks_flags = PXT4_GET_BLOCKS_CREATE |
+			   PXT4_GET_BLOCKS_METADATA_NOFAIL |
+			   PXT4_GET_BLOCKS_IO_SUBMIT;
 	dioread_nolock = pxt4_should_dioread_nolock(inode);
 	if (dioread_nolock)
-		get_blocks_flags |= EXT4_GET_BLOCKS_IO_CREATE_EXT;
+		get_blocks_flags |= PXT4_GET_BLOCKS_IO_CREATE_EXT;
 	if (map->m_flags & (1 << BH_Delay))
-		get_blocks_flags |= EXT4_GET_BLOCKS_DELALLOC_RESERVE;
+		get_blocks_flags |= PXT4_GET_BLOCKS_DELALLOC_RESERVE;
 
 	err = pxt4_map_blocks(handle, inode, map, get_blocks_flags);
 	if (err < 0)
 		return err;
-	if (dioread_nolock && (map->m_flags & EXT4_MAP_UNWRITTEN)) {
+	if (dioread_nolock && (map->m_flags & PXT4_MAP_UNWRITTEN)) {
 		if (!mpd->io_submit.io_end->handle &&
 		    pxt4_handle_valid(handle)) {
 			mpd->io_submit.io_end->handle = handle->h_rsv_handle;
@@ -2560,8 +2560,8 @@ static int mpage_map_and_submit_extent(handle_t *handle,
 		if (err < 0) {
 			struct super_block *sb = inode->i_sb;
 
-			if (pxt4_forced_shutdown(EXT4_SB(sb)) ||
-			    EXT4_SB(sb)->s_mount_flags & EXT4_MF_FS_ABORTED)
+			if (pxt4_forced_shutdown(PXT4_SB(sb)) ||
+			    PXT4_SB(sb)->s_mount_flags & PXT4_MF_FS_ABORTED)
 				goto invalidate_dirty_pages;
 			/*
 			 * Let the uper layers retry transient errors.
@@ -2606,17 +2606,17 @@ update_disksize:
 	 * truncate are avoided by checking i_size under i_data_sem.
 	 */
 	disksize = ((loff_t)mpd->first_page) << PAGE_SHIFT;
-	if (disksize > READ_ONCE(EXT4_I(inode)->i_disksize)) {
+	if (disksize > READ_ONCE(PXT4_I(inode)->i_disksize)) {
 		int err2;
 		loff_t i_size;
 
-		down_write(&EXT4_I(inode)->i_data_sem);
+		down_write(&PXT4_I(inode)->i_data_sem);
 		i_size = i_size_read(inode);
 		if (disksize > i_size)
 			disksize = i_size;
-		if (disksize > EXT4_I(inode)->i_disksize)
-			EXT4_I(inode)->i_disksize = disksize;
-		up_write(&EXT4_I(inode)->i_data_sem);
+		if (disksize > PXT4_I(inode)->i_disksize)
+			PXT4_I(inode)->i_disksize = disksize;
+		up_write(&PXT4_I(inode)->i_data_sem);
 		err2 = pxt4_mark_inode_dirty(handle, inode);
 		if (err2)
 			pxt4_error(inode->i_sb,
@@ -2775,12 +2775,12 @@ static int pxt4_writepages(struct address_space *mapping,
 	struct mpage_da_data mpd;
 	struct inode *inode = mapping->host;
 	int needed_blocks, rsv_blocks = 0, ret = 0;
-	struct pxt4_sb_info *sbi = EXT4_SB(mapping->host->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(mapping->host->i_sb);
 	bool done;
 	struct blk_plug plug;
 	bool give_up_on_write = false;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	percpu_down_read(&sbi->s_writepages_rwsem);
@@ -2803,14 +2803,14 @@ static int pxt4_writepages(struct address_space *mapping,
 	 * If the filesystem has aborted, it is read-only, so return
 	 * right away instead of dumping stack traces later on that
 	 * will obscure the real source of the problem.  We test
-	 * EXT4_MF_FS_ABORTED instead of sb->s_flag's SB_RDONLY because
+	 * PXT4_MF_FS_ABORTED instead of sb->s_flag's SB_RDONLY because
 	 * the latter could be true if the filesystem is mounted
 	 * read-only, and in that case, pxt4_writepages should
 	 * *never* be called, so if that ever happens, we would want
 	 * the stack trace.
 	 */
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(mapping->host->i_sb)) ||
-		     sbi->s_mount_flags & EXT4_MF_FS_ABORTED)) {
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(mapping->host->i_sb)) ||
+		     sbi->s_mount_flags & PXT4_MF_FS_ABORTED)) {
 		ret = -EROFS;
 		goto out_writepages;
 	}
@@ -2822,13 +2822,13 @@ static int pxt4_writepages(struct address_space *mapping,
 	 */
 	if (pxt4_has_inline_data(inode)) {
 		/* Just inode will be modified... */
-		handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+		handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 		if (IS_ERR(handle)) {
 			ret = PTR_ERR(handle);
 			goto out_writepages;
 		}
 		BUG_ON(pxt4_test_inode_state(inode,
-				EXT4_STATE_MAY_INLINE_DATA));
+				PXT4_STATE_MAY_INLINE_DATA));
 		pxt4_destroy_inline_data(handle, inode);
 		pxt4_journal_stop(handle);
 	}
@@ -2907,7 +2907,7 @@ retry:
 
 		/* start a new transaction */
 		handle = pxt4_journal_start_with_reserve(inode,
-				EXT4_HT_WRITE_PAGE, needed_blocks, rsv_blocks);
+				PXT4_HT_WRITE_PAGE, needed_blocks, rsv_blocks);
 		if (IS_ERR(handle)) {
 			ret = PTR_ERR(handle);
 			pxt4_msg(inode->i_sb, KERN_CRIT, "%s: jbd3_start: "
@@ -3014,9 +3014,9 @@ static int pxt4_dax_writepages(struct address_space *mapping,
 	int ret;
 	long nr_to_write = wbc->nr_to_write;
 	struct inode *inode = mapping->host;
-	struct pxt4_sb_info *sbi = EXT4_SB(mapping->host->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(mapping->host->i_sb);
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	percpu_down_read(&sbi->s_writepages_rwsem);
@@ -3032,7 +3032,7 @@ static int pxt4_dax_writepages(struct address_space *mapping,
 static int pxt4_nonda_switch(struct super_block *sb)
 {
 	s64 free_clusters, dirty_clusters;
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 
 	/*
 	 * switch to non delalloc mode if we are running low
@@ -3053,7 +3053,7 @@ static int pxt4_nonda_switch(struct super_block *sb)
 		try_to_writeback_inodes_sb(sb, WB_REASON_FS_FREE_SPACE);
 
 	if (2 * free_clusters < 3 * dirty_clusters ||
-	    free_clusters < (dirty_clusters + EXT4_FREECLUSTERS_WATERMARK)) {
+	    free_clusters < (dirty_clusters + PXT4_FREECLUSTERS_WATERMARK)) {
 		/*
 		 * free block count is less than 150% of dirty blocks
 		 * or free blocks is less than watermark
@@ -3086,7 +3086,7 @@ static int pxt4_da_write_begin(struct file *file, struct address_space *mapping,
 	struct inode *inode = mapping->host;
 	handle_t *handle;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	index = pos >> PAGE_SHIFT;
@@ -3100,7 +3100,7 @@ static int pxt4_da_write_begin(struct file *file, struct address_space *mapping,
 	*fsdata = (void *)0;
 	trace_pxt4_da_write_begin(inode, pos, len, flags);
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+	if (pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA)) {
 		ret = pxt4_da_write_inline_data_begin(mapping, inode,
 						      pos, len, flags,
 						      pagep, fsdata);
@@ -3130,7 +3130,7 @@ retry_grab:
 	 * of file which has an already mapped buffer.
 	 */
 retry_journal:
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE,
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE,
 				pxt4_da_write_credits(inode, pos, len));
 	if (IS_ERR(handle)) {
 		put_page(page);
@@ -3226,7 +3226,7 @@ static int pxt4_da_write_end(struct file *file,
 	 * into that.
 	 */
 	new_i_size = pos + copied;
-	if (copied && new_i_size > EXT4_I(inode)->i_disksize) {
+	if (copied && new_i_size > PXT4_I(inode)->i_disksize) {
 		if (pxt4_has_inline_data(inode) ||
 		    pxt4_da_should_update_i_disksize(page, end)) {
 			pxt4_update_i_disksize(inode, new_i_size);
@@ -3239,7 +3239,7 @@ static int pxt4_da_write_end(struct file *file,
 	}
 
 	if (write_mode != CONVERT_INLINE_DATA &&
-	    pxt4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA) &&
+	    pxt4_test_inode_state(inode, PXT4_STATE_MAY_INLINE_DATA) &&
 	    pxt4_has_inline_data(inode))
 		ret2 = pxt4_da_write_inline_data_end(inode, pos, len, copied,
 						     page);
@@ -3264,7 +3264,7 @@ int pxt4_alloc_da_blocks(struct inode *inode)
 {
 	trace_pxt4_alloc_da_blocks(inode);
 
-	if (!EXT4_I(inode)->i_reserved_data_blocks)
+	if (!PXT4_I(inode)->i_reserved_data_blocks)
 		return 0;
 
 	/*
@@ -3337,8 +3337,8 @@ static sector_t pxt4_bmap(struct address_space *mapping, sector_t block)
 		filemap_write_and_wait(mapping);
 	}
 
-	if (EXT4_JOURNAL(inode) &&
-	    pxt4_test_inode_state(inode, EXT4_STATE_JDATA)) {
+	if (PXT4_JOURNAL(inode) &&
+	    pxt4_test_inode_state(inode, PXT4_STATE_JDATA)) {
 		/*
 		 * This is a REALLY heavyweight approach, but the use of
 		 * bmap on dirty files is expected to be extremely rare:
@@ -3350,15 +3350,15 @@ static sector_t pxt4_bmap(struct address_space *mapping, sector_t block)
 		 * in trouble if mortal users could trigger this path at
 		 * will.)
 		 *
-		 * NB. EXT4_STATE_JDATA is not set on files other than
+		 * NB. PXT4_STATE_JDATA is not set on files other than
 		 * regular files.  If somebody wants to bmap a directory
 		 * or symlink and gets confused because the buffer
 		 * hasn't yet been flushed to disk, they deserve
 		 * everything they get.
 		 */
 
-		pxt4_clear_inode_state(inode, EXT4_STATE_JDATA);
-		journal = EXT4_JOURNAL(inode);
+		pxt4_clear_inode_state(inode, PXT4_STATE_JDATA);
+		journal = PXT4_JOURNAL(inode);
 		jbd3_journal_lock_updates(journal);
 		err = jbd3_journal_flush(journal);
 		jbd3_journal_unlock_updates(journal);
@@ -3415,7 +3415,7 @@ static int __pxt4_journalled_invalidatepage(struct page *page,
 					    unsigned int offset,
 					    unsigned int length)
 {
-	journal_t *journal = EXT4_JOURNAL(page->mapping->host);
+	journal_t *journal = PXT4_JOURNAL(page->mapping->host);
 
 	trace_pxt4_journalled_invalidatepage(page, offset, length);
 
@@ -3438,7 +3438,7 @@ static void pxt4_journalled_invalidatepage(struct page *page,
 
 static int pxt4_releasepage(struct page *page, gfp_t wait)
 {
-	journal_t *journal = EXT4_JOURNAL(page->mapping->host);
+	journal_t *journal = PXT4_JOURNAL(page->mapping->host);
 
 	trace_pxt4_releasepage(page);
 
@@ -3453,11 +3453,11 @@ static int pxt4_releasepage(struct page *page, gfp_t wait)
 
 static bool pxt4_inode_datasync_dirty(struct inode *inode)
 {
-	journal_t *journal = EXT4_SB(inode->i_sb)->s_journal;
+	journal_t *journal = PXT4_SB(inode->i_sb)->s_journal;
 
 	if (journal)
 		return !jbd3_transaction_committed(journal,
-					EXT4_I(inode)->i_datasync_tid);
+					PXT4_I(inode)->i_datasync_tid);
 	/* Any metadata buffers to write? */
 	if (!list_empty(&inode->i_mapping->private_list))
 		return true;
@@ -3467,18 +3467,18 @@ static bool pxt4_inode_datasync_dirty(struct inode *inode)
 static int pxt4_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
 			    unsigned flags, struct iomap *iomap)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	unsigned int blkbits = inode->i_blkbits;
 	unsigned long first_block, last_block;
 	struct pxt4_map_blocks map;
 	bool delalloc = false;
 	int ret;
 
-	if ((offset >> blkbits) > EXT4_MAX_LOGICAL_BLOCK)
+	if ((offset >> blkbits) > PXT4_MAX_LOGICAL_BLOCK)
 		return -EINVAL;
 	first_block = offset >> blkbits;
 	last_block = min_t(loff_t, (offset + length - 1) >> blkbits,
-			   EXT4_MAX_LOGICAL_BLOCK);
+			   PXT4_MAX_LOGICAL_BLOCK);
 
 	if (flags & IOMAP_REPORT) {
 		if (pxt4_has_inline_data(inode)) {
@@ -3540,13 +3540,13 @@ retry:
 		 * are already allocated and unwritten and in that case
 		 * extent conversion fits in the credits as well.
 		 */
-		handle = pxt4_journal_start(inode, EXT4_HT_MAP_BLOCKS,
+		handle = pxt4_journal_start(inode, PXT4_HT_MAP_BLOCKS,
 					    dio_credits);
 		if (IS_ERR(handle))
 			return PTR_ERR(handle);
 
 		ret = pxt4_map_blocks(handle, inode, &map,
-				      EXT4_GET_BLOCKS_CREATE_ZERO);
+				      PXT4_GET_BLOCKS_CREATE_ZERO);
 		if (ret < 0) {
 			pxt4_journal_stop(handle);
 			if (ret == -ENOSPC &&
@@ -3599,9 +3599,9 @@ retry:
 		iomap->type = delalloc ? IOMAP_DELALLOC : IOMAP_HOLE;
 		iomap->addr = IOMAP_NULL_ADDR;
 	} else {
-		if (map.m_flags & EXT4_MAP_MAPPED) {
+		if (map.m_flags & PXT4_MAP_MAPPED) {
 			iomap->type = IOMAP_MAPPED;
-		} else if (map.m_flags & EXT4_MAP_UNWRITTEN) {
+		} else if (map.m_flags & PXT4_MAP_UNWRITTEN) {
 			iomap->type = IOMAP_UNWRITTEN;
 		} else {
 			WARN_ON_ONCE(1);
@@ -3610,7 +3610,7 @@ retry:
 		iomap->addr = (u64)map.m_pblk << blkbits;
 	}
 
-	if (map.m_flags & EXT4_MAP_NEW)
+	if (map.m_flags & PXT4_MAP_NEW)
 		iomap->flags |= IOMAP_F_NEW;
 
 	return 0;
@@ -3627,7 +3627,7 @@ static int pxt4_iomap_end(struct inode *inode, loff_t offset, loff_t length,
 	if (!(flags & IOMAP_WRITE) || (flags & IOMAP_FAULT))
 		return 0;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 2);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 2);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		goto orphan_del;
@@ -3651,7 +3651,7 @@ static int pxt4_iomap_end(struct inode *inode, loff_t offset, loff_t length,
 	 * everything went fine.
 	 */
 	if (!truncate && inode->i_nlink &&
-	    !list_empty(&EXT4_I(inode)->i_orphan))
+	    !list_empty(&PXT4_I(inode)->i_orphan))
 		pxt4_orphan_del(handle, inode);
 	pxt4_journal_stop(handle);
 	if (truncate) {
@@ -3726,7 +3726,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	ssize_t ret;
 	loff_t offset = iocb->ki_pos;
 	size_t count = iov_iter_count(iter);
@@ -3739,7 +3739,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 
 	if (final_size > inode->i_size || final_size > ei->i_disksize) {
 		/* Credits for sb + inode write */
-		handle = pxt4_journal_start(inode, EXT4_HT_INODE, 2);
+		handle = pxt4_journal_start(inode, PXT4_HT_INODE, 2);
 		if (IS_ERR(handle)) {
 			ret = PTR_ERR(handle);
 			goto out;
@@ -3792,7 +3792,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 	iocb->private = NULL;
 	if (overwrite)
 		get_block_func = pxt4_dio_get_block_overwrite;
-	else if (!pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS) ||
+	else if (!pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS) ||
 		   round_down(offset, i_blocksize(inode)) >= inode->i_size) {
 		get_block_func = pxt4_dio_get_block;
 		dio_flags = DIO_LOCKING | DIO_SKIP_HOLES;
@@ -3808,7 +3808,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 				   dio_flags);
 
 	if (ret > 0 && !overwrite && pxt4_test_inode_state(inode,
-						EXT4_STATE_DIO_UNWRITTEN)) {
+						PXT4_STATE_DIO_UNWRITTEN)) {
 		int err;
 		/*
 		 * for non AIO case, since the IO is already
@@ -3818,7 +3818,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 						     offset, ret);
 		if (err < 0)
 			ret = err;
-		pxt4_clear_inode_state(inode, EXT4_STATE_DIO_UNWRITTEN);
+		pxt4_clear_inode_state(inode, PXT4_STATE_DIO_UNWRITTEN);
 	}
 
 	inode_dio_end(inode);
@@ -3834,7 +3834,7 @@ static ssize_t pxt4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 		int err;
 
 		/* Credits for sb + inode write */
-		handle = pxt4_journal_start(inode, EXT4_HT_INODE, 2);
+		handle = pxt4_journal_start(inode, PXT4_HT_INODE, 2);
 		if (IS_ERR(handle)) {
 			/*
 			 * We wrote the data but cannot extend
@@ -4035,10 +4035,10 @@ static const struct address_space_operations pxt4_dax_aops = {
 void pxt4_set_aops(struct inode *inode)
 {
 	switch (pxt4_inode_journal_mode(inode)) {
-	case EXT4_INODE_ORDERED_DATA_MODE:
-	case EXT4_INODE_WRITEBACK_DATA_MODE:
+	case PXT4_INODE_ORDERED_DATA_MODE:
+	case PXT4_INODE_WRITEBACK_DATA_MODE:
 		break;
-	case EXT4_INODE_JOURNAL_DATA_MODE:
+	case PXT4_INODE_JOURNAL_DATA_MODE:
 		inode->i_mapping->a_ops = &pxt4_journalled_aops;
 		return;
 	default:
@@ -4259,10 +4259,10 @@ int pxt4_update_disksize_before_punch(struct inode *inode, loff_t offset,
 	if (offset > size || offset + len < size)
 		return 0;
 
-	if (EXT4_I(inode)->i_disksize >= size)
+	if (PXT4_I(inode)->i_disksize >= size)
 		return 0;
 
-	handle = pxt4_journal_start(inode, EXT4_HT_MISC, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_MISC, 1);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 	pxt4_update_i_disksize(inode, size);
@@ -4281,7 +4281,7 @@ static void pxt4_wait_dax_page(struct pxt4_inode_info *ei)
 
 int pxt4_break_layouts(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct page *page;
 	int error;
 
@@ -4319,7 +4319,7 @@ int pxt4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 	pxt4_lblk_t first_block, stop_block;
 	struct address_space *mapping = inode->i_mapping;
 	loff_t first_block_offset, last_block_offset, max_length;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	handle_t *handle;
 	unsigned int credits;
 	int ret = 0;
@@ -4383,7 +4383,7 @@ int pxt4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 	 * Prevent page faults from reinstantiating pages we have released from
 	 * page cache.
 	 */
-	down_write(&EXT4_I(inode)->i_mmap_sem);
+	down_write(&PXT4_I(inode)->i_mmap_sem);
 
 	ret = pxt4_break_layouts(inode);
 	if (ret)
@@ -4401,11 +4401,11 @@ int pxt4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 					 last_block_offset);
 	}
 
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 		credits = pxt4_writepage_trans_blocks(inode);
 	else
 		credits = pxt4_blocks_for_truncate(inode);
-	handle = pxt4_journal_start(inode, EXT4_HT_TRUNCATE, credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_TRUNCATE, credits);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
 		pxt4_std_error(sb, ret);
@@ -4418,30 +4418,30 @@ int pxt4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 		goto out_stop;
 
 	first_block = (offset + sb->s_blocksize - 1) >>
-		EXT4_BLOCK_SIZE_BITS(sb);
-	stop_block = (offset + length) >> EXT4_BLOCK_SIZE_BITS(sb);
+		PXT4_BLOCK_SIZE_BITS(sb);
+	stop_block = (offset + length) >> PXT4_BLOCK_SIZE_BITS(sb);
 
 	/* If there are blocks to remove, do it */
 	if (stop_block > first_block) {
 
-		down_write(&EXT4_I(inode)->i_data_sem);
+		down_write(&PXT4_I(inode)->i_data_sem);
 		pxt4_discard_preallocations(inode);
 
 		ret = pxt4_es_remove_extent(inode, first_block,
 					    stop_block - first_block);
 		if (ret) {
-			up_write(&EXT4_I(inode)->i_data_sem);
+			up_write(&PXT4_I(inode)->i_data_sem);
 			goto out_stop;
 		}
 
-		if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+		if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 			ret = pxt4_ext_remove_space(inode, first_block,
 						    stop_block - 1);
 		else
 			ret = pxt4_ind_remove_space(handle, inode, first_block,
 						    stop_block);
 
-		up_write(&EXT4_I(inode)->i_data_sem);
+		up_write(&PXT4_I(inode)->i_data_sem);
 	}
 	if (IS_SYNC(inode))
 		pxt4_handle_sync(handle);
@@ -4453,7 +4453,7 @@ int pxt4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 out_stop:
 	pxt4_journal_stop(handle);
 out_dio:
-	up_write(&EXT4_I(inode)->i_mmap_sem);
+	up_write(&PXT4_I(inode)->i_mmap_sem);
 out_mutex:
 	inode_unlock(inode);
 	return ret;
@@ -4461,10 +4461,10 @@ out_mutex:
 
 int pxt4_inode_attach_jinode(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct jbd3_inode *jinode;
 
-	if (ei->jinode || !EXT4_SB(inode->i_sb)->s_journal)
+	if (ei->jinode || !PXT4_SB(inode->i_sb)->s_journal)
 		return 0;
 
 	jinode = jbd3_alloc_inode(GFP_KERNEL);
@@ -4514,7 +4514,7 @@ int pxt4_inode_attach_jinode(struct inode *inode)
  */
 int pxt4_truncate(struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	unsigned int credits;
 	int err = 0;
 	handle_t *handle;
@@ -4532,10 +4532,10 @@ int pxt4_truncate(struct inode *inode)
 	if (!pxt4_can_truncate(inode))
 		return 0;
 
-	pxt4_clear_inode_flag(inode, EXT4_INODE_EOFBLOCKS);
+	pxt4_clear_inode_flag(inode, PXT4_INODE_EOFBLOCKS);
 
 	if (inode->i_size == 0 && !test_opt(inode->i_sb, NO_AUTO_DA_ALLOC))
-		pxt4_set_inode_state(inode, EXT4_STATE_DA_ALLOC_CLOSE);
+		pxt4_set_inode_state(inode, PXT4_STATE_DA_ALLOC_CLOSE);
 
 	if (pxt4_has_inline_data(inode)) {
 		int has_inline = 1;
@@ -4553,12 +4553,12 @@ int pxt4_truncate(struct inode *inode)
 			return 0;
 	}
 
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 		credits = pxt4_writepage_trans_blocks(inode);
 	else
 		credits = pxt4_blocks_for_truncate(inode);
 
-	handle = pxt4_journal_start(inode, EXT4_HT_TRUNCATE, credits);
+	handle = pxt4_journal_start(inode, PXT4_HT_TRUNCATE, credits);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -4578,11 +4578,11 @@ int pxt4_truncate(struct inode *inode)
 	if (err)
 		goto out_stop;
 
-	down_write(&EXT4_I(inode)->i_data_sem);
+	down_write(&PXT4_I(inode)->i_data_sem);
 
 	pxt4_discard_preallocations(inode);
 
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 		err = pxt4_ext_truncate(handle, inode);
 	else
 		pxt4_ind_truncate(handle, inode);
@@ -4630,11 +4630,11 @@ static int __pxt4_get_inode_loc(struct inode *inode,
 	int			inodes_per_block, inode_offset;
 
 	iloc->bh = NULL;
-	if (inode->i_ino < EXT4_ROOT_INO ||
-	    inode->i_ino > le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count))
+	if (inode->i_ino < PXT4_ROOT_INO ||
+	    inode->i_ino > le32_to_cpu(PXT4_SB(sb)->s_es->s_inodes_count))
 		return -EFSCORRUPTED;
 
-	iloc->block_group = (inode->i_ino - 1) / EXT4_INODES_PER_GROUP(sb);
+	iloc->block_group = (inode->i_ino - 1) / PXT4_INODES_PER_GROUP(sb);
 	gdp = pxt4_get_group_desc(sb, iloc->block_group, NULL);
 	if (!gdp)
 		return -EIO;
@@ -4642,11 +4642,11 @@ static int __pxt4_get_inode_loc(struct inode *inode,
 	/*
 	 * Figure out the offset within the block group inode table
 	 */
-	inodes_per_block = EXT4_SB(sb)->s_inodes_per_block;
+	inodes_per_block = PXT4_SB(sb)->s_inodes_per_block;
 	inode_offset = ((inode->i_ino - 1) %
-			EXT4_INODES_PER_GROUP(sb));
+			PXT4_INODES_PER_GROUP(sb));
 	block = pxt4_inode_table(sb, gdp) + (inode_offset / inodes_per_block);
-	iloc->offset = (inode_offset % inodes_per_block) * EXT4_INODE_SIZE(sb);
+	iloc->offset = (inode_offset % inodes_per_block) * PXT4_INODE_SIZE(sb);
 
 	bh = sb_getblk(sb, block);
 	if (unlikely(!bh))
@@ -4716,10 +4716,10 @@ make_io:
 		 * blocks from the inode table.
 		 */
 		blk_start_plug(&plug);
-		if (EXT4_SB(sb)->s_inode_readahead_blks) {
+		if (PXT4_SB(sb)->s_inode_readahead_blks) {
 			pxt4_fsblk_t b, end, table;
 			unsigned num;
-			__u32 ra_blks = EXT4_SB(sb)->s_inode_readahead_blks;
+			__u32 ra_blks = PXT4_SB(sb)->s_inode_readahead_blks;
 
 			table = pxt4_inode_table(sb, gdp);
 			/* s_inode_readahead_blks is always a power of 2 */
@@ -4727,7 +4727,7 @@ make_io:
 			if (table > b)
 				b = table;
 			end = b + ra_blks;
-			num = EXT4_INODES_PER_GROUP(sb);
+			num = PXT4_INODES_PER_GROUP(sb);
 			if (pxt4_has_group_desc_csum(sb))
 				num -= pxt4_itable_unused_count(sb, gdp);
 			table += num / inodes_per_block;
@@ -4749,7 +4749,7 @@ make_io:
 		blk_finish_plug(&plug);
 		wait_on_buffer(bh);
 		if (!buffer_uptodate(bh)) {
-			EXT4_ERROR_INODE_BLOCK(inode, block,
+			PXT4_ERROR_INODE_BLOCK(inode, block,
 					       "unable to read itable block");
 			brelse(bh);
 			return -EIO;
@@ -4764,7 +4764,7 @@ int pxt4_get_inode_loc(struct inode *inode, struct pxt4_iloc *iloc)
 {
 	/* We have all inode data except xattrs in memory here. */
 	return __pxt4_get_inode_loc(inode, iloc,
-		!pxt4_test_inode_state(inode, EXT4_STATE_XATTR));
+		!pxt4_test_inode_state(inode, PXT4_STATE_XATTR));
 }
 
 static bool pxt4_should_use_dax(struct inode *inode)
@@ -4777,35 +4777,35 @@ static bool pxt4_should_use_dax(struct inode *inode)
 		return false;
 	if (pxt4_has_inline_data(inode))
 		return false;
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_ENCRYPT))
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_ENCRYPT))
 		return false;
-	if (pxt4_test_inode_flag(inode, EXT4_INODE_VERITY))
+	if (pxt4_test_inode_flag(inode, PXT4_INODE_VERITY))
 		return false;
 	return true;
 }
 
 void pxt4_set_inode_flags(struct inode *inode)
 {
-	unsigned int flags = EXT4_I(inode)->i_flags;
+	unsigned int flags = PXT4_I(inode)->i_flags;
 	unsigned int new_fl = 0;
 
-	if (flags & EXT4_SYNC_FL)
+	if (flags & PXT4_SYNC_FL)
 		new_fl |= S_SYNC;
-	if (flags & EXT4_APPEND_FL)
+	if (flags & PXT4_APPEND_FL)
 		new_fl |= S_APPEND;
-	if (flags & EXT4_IMMUTABLE_FL)
+	if (flags & PXT4_IMMUTABLE_FL)
 		new_fl |= S_IMMUTABLE;
-	if (flags & EXT4_NOATIME_FL)
+	if (flags & PXT4_NOATIME_FL)
 		new_fl |= S_NOATIME;
-	if (flags & EXT4_DIRSYNC_FL)
+	if (flags & PXT4_DIRSYNC_FL)
 		new_fl |= S_DIRSYNC;
 	if (pxt4_should_use_dax(inode))
 		new_fl |= S_DAX;
-	if (flags & EXT4_ENCRYPT_FL)
+	if (flags & PXT4_ENCRYPT_FL)
 		new_fl |= S_ENCRYPTED;
-	if (flags & EXT4_CASEFOLD_FL)
+	if (flags & PXT4_CASEFOLD_FL)
 		new_fl |= S_CASEFOLD;
-	if (flags & EXT4_VERITY_FL)
+	if (flags & PXT4_VERITY_FL)
 		new_fl |= S_VERITY;
 	inode_set_flags(inode, new_fl,
 			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|S_DAX|
@@ -4823,7 +4823,7 @@ static blkcnt_t pxt4_inode_blocks(struct pxt4_inode *raw_inode,
 		/* we are using combined 48 bit field */
 		i_blocks = ((u64)le16_to_cpu(raw_inode->i_blocks_high)) << 32 |
 					le32_to_cpu(raw_inode->i_blocks_lo);
-		if (pxt4_test_inode_flag(inode, EXT4_INODE_HUGE_FILE)) {
+		if (pxt4_test_inode_flag(inode, PXT4_INODE_HUGE_FILE)) {
 			/* i_blocks represent file system block size */
 			return i_blocks  << (inode->i_blkbits - 9);
 		} else {
@@ -4839,14 +4839,14 @@ static inline int pxt4_iget_extra_inode(struct inode *inode,
 					 struct pxt4_inode_info *ei)
 {
 	__le32 *magic = (void *)raw_inode +
-			EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize;
+			PXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize;
 
-	if (EXT4_INODE_HAS_XATTR_SPACE(inode)  &&
-	    *magic == cpu_to_le32(EXT4_XATTR_MAGIC)) {
-		pxt4_set_inode_state(inode, EXT4_STATE_XATTR);
+	if (PXT4_INODE_HAS_XATTR_SPACE(inode)  &&
+	    *magic == cpu_to_le32(PXT4_XATTR_MAGIC)) {
+		pxt4_set_inode_state(inode, PXT4_STATE_XATTR);
 		return pxt4_find_inline_data_nolock(inode);
 	} else
-		EXT4_I(inode)->i_inline_off = 0;
+		PXT4_I(inode)->i_inline_off = 0;
 	return 0;
 }
 
@@ -4854,25 +4854,25 @@ int pxt4_get_projid(struct inode *inode, kprojid_t *projid)
 {
 	if (!pxt4_has_feature_project(inode->i_sb))
 		return -EOPNOTSUPP;
-	*projid = EXT4_I(inode)->i_projid;
+	*projid = PXT4_I(inode)->i_projid;
 	return 0;
 }
 
 /*
  * pxt4 has self-managed i_version for ea inodes, it stores the lower 32bit of
- * refcount in i_version, so use raw values if inode has EXT4_EA_INODE_FL flag
+ * refcount in i_version, so use raw values if inode has PXT4_EA_INODE_FL flag
  * set.
  */
 static inline void pxt4_inode_set_iversion_queried(struct inode *inode, u64 val)
 {
-	if (unlikely(EXT4_I(inode)->i_flags & EXT4_EA_INODE_FL))
+	if (unlikely(PXT4_I(inode)->i_flags & PXT4_EA_INODE_FL))
 		inode_set_iversion_raw(inode, val);
 	else
 		inode_set_iversion_queried(inode, val);
 }
 static inline u64 pxt4_inode_peek_iversion(const struct inode *inode)
 {
-	if (unlikely(EXT4_I(inode)->i_flags & EXT4_EA_INODE_FL))
+	if (unlikely(PXT4_I(inode)->i_flags & PXT4_EA_INODE_FL))
 		return inode_peek_iversion_raw(inode);
 	else
 		return inode_peek_iversion(inode);
@@ -4886,7 +4886,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	struct pxt4_inode *raw_inode;
 	struct pxt4_inode_info *ei;
 	struct inode *inode;
-	journal_t *journal = EXT4_SB(sb)->s_journal;
+	journal_t *journal = PXT4_SB(sb)->s_journal;
 	long ret;
 	loff_t size;
 	int block;
@@ -4894,11 +4894,11 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	gid_t i_gid;
 	projid_t i_projid;
 
-	if ((!(flags & EXT4_IGET_SPECIAL) &&
-	     (ino < EXT4_FIRST_INO(sb) && ino != EXT4_ROOT_INO)) ||
-	    (ino < EXT4_ROOT_INO) ||
-	    (ino > le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count))) {
-		if (flags & EXT4_IGET_HANDLE)
+	if ((!(flags & PXT4_IGET_SPECIAL) &&
+	     (ino < PXT4_FIRST_INO(sb) && ino != PXT4_ROOT_INO)) ||
+	    (ino < PXT4_ROOT_INO) ||
+	    (ino > le32_to_cpu(PXT4_SB(sb)->s_es->s_inodes_count))) {
+		if (flags & PXT4_IGET_HANDLE)
 			return ERR_PTR(-ESTALE);
 		__pxt4_error(sb, function, line,
 			     "inode #%lu: comm %s: iget: illegal inode #",
@@ -4912,7 +4912,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	if (!(inode->i_state & I_NEW))
 		return inode;
 
-	ei = EXT4_I(inode);
+	ei = PXT4_I(inode);
 	iloc.bh = NULL;
 
 	ret = __pxt4_get_inode_loc(inode, &iloc, 0);
@@ -4920,29 +4920,29 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		goto bad_inode;
 	raw_inode = pxt4_raw_inode(&iloc);
 
-	if ((ino == EXT4_ROOT_INO) && (raw_inode->i_links_count == 0)) {
+	if ((ino == PXT4_ROOT_INO) && (raw_inode->i_links_count == 0)) {
 		pxt4_error_inode(inode, function, line, 0,
 				 "iget: root inode unallocated");
 		ret = -EFSCORRUPTED;
 		goto bad_inode;
 	}
 
-	if ((flags & EXT4_IGET_HANDLE) &&
+	if ((flags & PXT4_IGET_HANDLE) &&
 	    (raw_inode->i_links_count == 0) && (raw_inode->i_mode == 0)) {
 		ret = -ESTALE;
 		goto bad_inode;
 	}
 
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE) {
 		ei->i_extra_isize = le16_to_cpu(raw_inode->i_extra_isize);
-		if (EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize >
-			EXT4_INODE_SIZE(inode->i_sb) ||
+		if (PXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize >
+			PXT4_INODE_SIZE(inode->i_sb) ||
 		    (ei->i_extra_isize & 3)) {
 			pxt4_error_inode(inode, function, line, 0,
 					 "iget: bad extra_isize %u "
 					 "(inode size %u)",
 					 ei->i_extra_isize,
-					 EXT4_INODE_SIZE(inode->i_sb));
+					 PXT4_INODE_SIZE(inode->i_sb));
 			ret = -EFSCORRUPTED;
 			goto bad_inode;
 		}
@@ -4951,7 +4951,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 
 	/* Precompute checksum seed for inode metadata */
 	if (pxt4_has_metadata_csum(sb)) {
-		struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+		struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 		__u32 csum;
 		__le32 inum = cpu_to_le32(inode->i_ino);
 		__le32 gen = raw_inode->i_generation;
@@ -4972,11 +4972,11 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	i_uid = (uid_t)le16_to_cpu(raw_inode->i_uid_low);
 	i_gid = (gid_t)le16_to_cpu(raw_inode->i_gid_low);
 	if (pxt4_has_feature_project(sb) &&
-	    EXT4_INODE_SIZE(sb) > EXT4_GOOD_OLD_INODE_SIZE &&
-	    EXT4_FITS_IN_INODE(raw_inode, ei, i_projid))
+	    PXT4_INODE_SIZE(sb) > PXT4_GOOD_OLD_INODE_SIZE &&
+	    PXT4_FITS_IN_INODE(raw_inode, ei, i_projid))
 		i_projid = (projid_t)le32_to_cpu(raw_inode->i_projid);
 	else
-		i_projid = EXT4_DEF_PROJID;
+		i_projid = PXT4_DEF_PROJID;
 
 	if (!(test_opt(inode->i_sb, NO_UID32))) {
 		i_uid |= le16_to_cpu(raw_inode->i_uid_high) << 16;
@@ -4998,8 +4998,8 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	 */
 	if (inode->i_nlink == 0) {
 		if ((inode->i_mode == 0 ||
-		     !(EXT4_SB(inode->i_sb)->s_mount_state & EXT4_ORPHAN_FS)) &&
-		    ino != EXT4_BOOT_LOADER_INO) {
+		     !(PXT4_SB(inode->i_sb)->s_mount_state & PXT4_ORPHAN_FS)) &&
+		    ino != PXT4_BOOT_LOADER_INO) {
 			/* this inode is deleted */
 			ret = -ESTALE;
 			goto bad_inode;
@@ -5008,7 +5008,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		 * valid i_mode and are being read by the orphan
 		 * recovery code: that's fine, we're about to complete
 		 * the process of deleting those.
-		 * OR it is the EXT4_BOOT_LOADER_INO which is
+		 * OR it is the PXT4_BOOT_LOADER_INO which is
 		 * not initialized on a new filesystem. */
 	}
 	ei->i_flags = le32_to_cpu(raw_inode->i_flags);
@@ -5031,7 +5031,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	 * checksumming that corrupts checksums so forbid that.
 	 */
 	if (!pxt4_has_feature_dir_index(sb) && pxt4_has_metadata_csum(sb) &&
-	    pxt4_test_inode_flag(inode, EXT4_INODE_INDEX)) {
+	    pxt4_test_inode_flag(inode, PXT4_INODE_INDEX)) {
 		pxt4_error_inode(inode, function, line, 0,
 			 "iget: Dir with htree data on filesystem without dir_index feature.");
 		ret = -EFSCORRUPTED;
@@ -5048,7 +5048,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 	 * NOTE! The in-memory inode i_data array is in little-endian order
 	 * even on big-endian machines: we do NOT byteswap the block numbers!
 	 */
-	for (block = 0; block < EXT4_N_BLOCKS; block++)
+	for (block = 0; block < PXT4_N_BLOCKS; block++)
 		ei->i_data[block] = raw_inode->i_block[block];
 	INIT_LIST_HEAD(&ei->i_orphan);
 
@@ -5077,12 +5077,12 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		ei->i_datasync_tid = tid;
 	}
 
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE) {
 		if (ei->i_extra_isize == 0) {
 			/* The extra space is currently unused. Use it. */
 			BUILD_BUG_ON(sizeof(struct pxt4_inode) & 3);
 			ei->i_extra_isize = sizeof(struct pxt4_inode) -
-					    EXT4_GOOD_OLD_INODE_SIZE;
+					    PXT4_GOOD_OLD_INODE_SIZE;
 		} else {
 			ret = pxt4_iget_extra_inode(inode, raw_inode, ei);
 			if (ret)
@@ -5090,16 +5090,16 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		}
 	}
 
-	EXT4_INODE_GET_XTIME(i_ctime, inode, raw_inode);
-	EXT4_INODE_GET_XTIME(i_mtime, inode, raw_inode);
-	EXT4_INODE_GET_XTIME(i_atime, inode, raw_inode);
-	EXT4_EINODE_GET_XTIME(i_crtime, ei, raw_inode);
+	PXT4_INODE_GET_XTIME(i_ctime, inode, raw_inode);
+	PXT4_INODE_GET_XTIME(i_mtime, inode, raw_inode);
+	PXT4_INODE_GET_XTIME(i_atime, inode, raw_inode);
+	PXT4_EINODE_GET_XTIME(i_crtime, ei, raw_inode);
 
 	if (likely(!test_opt2(inode->i_sb, HURD_COMPAT))) {
 		u64 ivers = le32_to_cpu(raw_inode->i_disk_version);
 
-		if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE) {
-			if (EXT4_FITS_IN_INODE(raw_inode, ei, i_version_hi))
+		if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE) {
+			if (PXT4_FITS_IN_INODE(raw_inode, ei, i_version_hi))
 				ivers |=
 		    (__u64)(le32_to_cpu(raw_inode->i_version_hi)) << 32;
 		}
@@ -5108,7 +5108,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 
 	ret = 0;
 	if (ei->i_file_acl &&
-	    !pxt4_data_block_valid(EXT4_SB(sb), ei->i_file_acl, 1)) {
+	    !pxt4_data_block_valid(PXT4_SB(sb), ei->i_file_acl, 1)) {
 		pxt4_error_inode(inode, function, line, 0,
 				 "iget: bad extended attribute block %llu",
 				 ei->i_file_acl);
@@ -5119,7 +5119,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		if (S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
 		   (S_ISLNK(inode->i_mode) &&
 		    !pxt4_inode_is_fast_symlink(inode))) {
-			if (pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
+			if (pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))
 				ret = pxt4_ext_check_inode(inode);
 			else
 				ret = pxt4_ind_check_inode(inode);
@@ -5166,7 +5166,7 @@ struct inode *__pxt4_iget(struct super_block *sb, unsigned long ino,
 		else
 			init_special_inode(inode, inode->i_mode,
 			   new_decode_dev(le32_to_cpu(raw_inode->i_block[1])));
-	} else if (ino == EXT4_BOOT_LOADER_INO) {
+	} else if (ino == PXT4_BOOT_LOADER_INO) {
 		make_bad_inode(inode);
 	} else {
 		ret = -EFSCORRUPTED;
@@ -5203,7 +5203,7 @@ static int pxt4_inode_blocks_set(handle_t *handle,
 		 */
 		raw_inode->i_blocks_lo   = cpu_to_le32(i_blocks);
 		raw_inode->i_blocks_high = 0;
-		pxt4_clear_inode_flag(inode, EXT4_INODE_HUGE_FILE);
+		pxt4_clear_inode_flag(inode, PXT4_INODE_HUGE_FILE);
 		return 0;
 	}
 	if (!pxt4_has_feature_huge_file(sb))
@@ -5216,9 +5216,9 @@ static int pxt4_inode_blocks_set(handle_t *handle,
 		 */
 		raw_inode->i_blocks_lo   = cpu_to_le32(i_blocks);
 		raw_inode->i_blocks_high = cpu_to_le16(i_blocks >> 32);
-		pxt4_clear_inode_flag(inode, EXT4_INODE_HUGE_FILE);
+		pxt4_clear_inode_flag(inode, PXT4_INODE_HUGE_FILE);
 	} else {
-		pxt4_set_inode_flag(inode, EXT4_INODE_HUGE_FILE);
+		pxt4_set_inode_flag(inode, PXT4_INODE_HUGE_FILE);
 		/* i_block is stored in file system block size */
 		i_blocks = i_blocks >> (inode->i_blkbits - 9);
 		raw_inode->i_blocks_lo   = cpu_to_le32(i_blocks);
@@ -5246,15 +5246,15 @@ static int other_inode_match(struct inode * inode, unsigned long ino,
 	if (((inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW |
 				I_DIRTY_INODE)) == 0) &&
 	    (inode->i_state & I_DIRTY_TIME)) {
-		struct pxt4_inode_info	*ei = EXT4_I(inode);
+		struct pxt4_inode_info	*ei = PXT4_I(inode);
 
 		inode->i_state &= ~I_DIRTY_TIME;
 		spin_unlock(&inode->i_lock);
 
 		spin_lock(&ei->i_raw_lock);
-		EXT4_INODE_SET_XTIME(i_ctime, inode, oi->raw_inode);
-		EXT4_INODE_SET_XTIME(i_mtime, inode, oi->raw_inode);
-		EXT4_INODE_SET_XTIME(i_atime, inode, oi->raw_inode);
+		PXT4_INODE_SET_XTIME(i_ctime, inode, oi->raw_inode);
+		PXT4_INODE_SET_XTIME(i_mtime, inode, oi->raw_inode);
+		PXT4_INODE_SET_XTIME(i_atime, inode, oi->raw_inode);
 		pxt4_inode_csum_set(inode, oi->raw_inode, ei);
 		spin_unlock(&ei->i_raw_lock);
 		trace_pxt4_other_inode_update_time(inode, oi->orig_ino);
@@ -5273,8 +5273,8 @@ static void pxt4_update_other_inodes_time(struct super_block *sb,
 {
 	struct other_inode oi;
 	unsigned long ino;
-	int i, inodes_per_block = EXT4_SB(sb)->s_inodes_per_block;
-	int inode_size = EXT4_INODE_SIZE(sb);
+	int i, inodes_per_block = PXT4_SB(sb)->s_inodes_per_block;
+	int inode_size = PXT4_INODE_SIZE(sb);
 
 	oi.orig_ino = orig_ino;
 	/*
@@ -5303,7 +5303,7 @@ static int pxt4_do_update_inode(handle_t *handle,
 				struct pxt4_iloc *iloc)
 {
 	struct pxt4_inode *raw_inode = pxt4_raw_inode(iloc);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	struct buffer_head *bh = iloc->bh;
 	struct super_block *sb = inode->i_sb;
 	int err = 0, block;
@@ -5316,8 +5316,8 @@ static int pxt4_do_update_inode(handle_t *handle,
 
 	/* For fields not tracked in the in-memory inode,
 	 * initialise them to zero for new inodes. */
-	if (pxt4_test_inode_state(inode, EXT4_STATE_NEW))
-		memset(raw_inode, 0, EXT4_SB(inode->i_sb)->s_inode_size);
+	if (pxt4_test_inode_state(inode, PXT4_STATE_NEW))
+		memset(raw_inode, 0, PXT4_SB(inode->i_sb)->s_inode_size);
 
 	err = pxt4_inode_blocks_set(handle, raw_inode, ei);
 	if (err) {
@@ -5353,10 +5353,10 @@ static int pxt4_do_update_inode(handle_t *handle,
 	}
 	raw_inode->i_links_count = cpu_to_le16(inode->i_nlink);
 
-	EXT4_INODE_SET_XTIME(i_ctime, inode, raw_inode);
-	EXT4_INODE_SET_XTIME(i_mtime, inode, raw_inode);
-	EXT4_INODE_SET_XTIME(i_atime, inode, raw_inode);
-	EXT4_EINODE_SET_XTIME(i_crtime, ei, raw_inode);
+	PXT4_INODE_SET_XTIME(i_ctime, inode, raw_inode);
+	PXT4_INODE_SET_XTIME(i_mtime, inode, raw_inode);
+	PXT4_INODE_SET_XTIME(i_atime, inode, raw_inode);
+	PXT4_EINODE_SET_XTIME(i_crtime, ei, raw_inode);
 
 	raw_inode->i_dtime = cpu_to_le32(ei->i_dtime);
 	raw_inode->i_flags = cpu_to_le32(ei->i_flags & 0xFFFFFFFF);
@@ -5370,8 +5370,8 @@ static int pxt4_do_update_inode(handle_t *handle,
 	}
 	if (ei->i_disksize > 0x7fffffffULL) {
 		if (!pxt4_has_feature_large_file(sb) ||
-				EXT4_SB(sb)->s_es->s_rev_level ==
-		    cpu_to_le32(EXT4_GOOD_OLD_REV))
+				PXT4_SB(sb)->s_es->s_rev_level ==
+		    cpu_to_le32(PXT4_GOOD_OLD_REV))
 			set_large_file = 1;
 	}
 	raw_inode->i_generation = cpu_to_le32(inode->i_generation);
@@ -5387,7 +5387,7 @@ static int pxt4_do_update_inode(handle_t *handle,
 			raw_inode->i_block[2] = 0;
 		}
 	} else if (!pxt4_has_inline_data(inode)) {
-		for (block = 0; block < EXT4_N_BLOCKS; block++)
+		for (block = 0; block < PXT4_N_BLOCKS; block++)
 			raw_inode->i_block[block] = ei->i_data[block];
 	}
 
@@ -5396,7 +5396,7 @@ static int pxt4_do_update_inode(handle_t *handle,
 
 		raw_inode->i_disk_version = cpu_to_le32(ivers);
 		if (ei->i_extra_isize) {
-			if (EXT4_FITS_IN_INODE(raw_inode, ei, i_version_hi))
+			if (PXT4_FITS_IN_INODE(raw_inode, ei, i_version_hi))
 				raw_inode->i_version_hi =
 					cpu_to_le32(ivers >> 32);
 			raw_inode->i_extra_isize =
@@ -5405,10 +5405,10 @@ static int pxt4_do_update_inode(handle_t *handle,
 	}
 
 	BUG_ON(!pxt4_has_feature_project(inode->i_sb) &&
-	       i_projid != EXT4_DEF_PROJID);
+	       i_projid != PXT4_DEF_PROJID);
 
-	if (EXT4_INODE_SIZE(inode->i_sb) > EXT4_GOOD_OLD_INODE_SIZE &&
-	    EXT4_FITS_IN_INODE(raw_inode, ei, i_projid))
+	if (PXT4_INODE_SIZE(inode->i_sb) > PXT4_GOOD_OLD_INODE_SIZE &&
+	    PXT4_FITS_IN_INODE(raw_inode, ei, i_projid))
 		raw_inode->i_projid = cpu_to_le32(i_projid);
 
 	pxt4_inode_csum_set(inode, raw_inode, ei);
@@ -5421,10 +5421,10 @@ static int pxt4_do_update_inode(handle_t *handle,
 	err = pxt4_handle_dirty_metadata(handle, NULL, bh);
 	if (err)
 		goto out_brelse;
-	pxt4_clear_inode_state(inode, EXT4_STATE_NEW);
+	pxt4_clear_inode_state(inode, PXT4_STATE_NEW);
 	if (set_large_file) {
-		BUFFER_TRACE(EXT4_SB(sb)->s_sbh, "get write access");
-		err = pxt4_journal_get_write_access(handle, EXT4_SB(sb)->s_sbh);
+		BUFFER_TRACE(PXT4_SB(sb)->s_sbh, "get write access");
+		err = pxt4_journal_get_write_access(handle, PXT4_SB(sb)->s_sbh);
 		if (err)
 			goto out_brelse;
 		pxt4_set_feature_large_file(sb);
@@ -5480,10 +5480,10 @@ int pxt4_write_inode(struct inode *inode, struct writeback_control *wbc)
 	    sb_rdonly(inode->i_sb))
 		return 0;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
-	if (EXT4_SB(inode->i_sb)->s_journal) {
+	if (PXT4_SB(inode->i_sb)->s_journal) {
 		if (pxt4_journal_current_handle()) {
 			jbd_debug(1, "called recursively, non-PF_MEMALLOC!\n");
 			dump_stack();
@@ -5498,8 +5498,8 @@ int pxt4_write_inode(struct inode *inode, struct writeback_control *wbc)
 		if (wbc->sync_mode != WB_SYNC_ALL || wbc->for_sync)
 			return 0;
 
-		err = jbd3_complete_transaction(EXT4_SB(inode->i_sb)->s_journal,
-						EXT4_I(inode)->i_sync_tid);
+		err = jbd3_complete_transaction(PXT4_SB(inode->i_sb)->s_journal,
+						PXT4_I(inode)->i_sync_tid);
 	} else {
 		struct pxt4_iloc iloc;
 
@@ -5513,7 +5513,7 @@ int pxt4_write_inode(struct inode *inode, struct writeback_control *wbc)
 		if (wbc->sync_mode == WB_SYNC_ALL && !wbc->for_sync)
 			sync_dirty_buffer(iloc.bh);
 		if (buffer_req(iloc.bh) && !buffer_uptodate(iloc.bh)) {
-			EXT4_ERROR_INODE_BLOCK(inode, iloc.bh->b_blocknr,
+			PXT4_ERROR_INODE_BLOCK(inode, iloc.bh->b_blocknr,
 					 "IO error syncing inode");
 			err = -EIO;
 		}
@@ -5531,7 +5531,7 @@ static void pxt4_wait_for_tail_page_commit(struct inode *inode)
 {
 	struct page *page;
 	unsigned offset;
-	journal_t *journal = EXT4_SB(inode->i_sb)->s_journal;
+	journal_t *journal = PXT4_SB(inode->i_sb)->s_journal;
 	tid_t commit_tid = 0;
 	int ret;
 
@@ -5599,7 +5599,7 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 	int orphan = 0;
 	const unsigned int ia_valid = attr->ia_valid;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	if (unlikely(IS_IMMUTABLE(inode)))
@@ -5633,9 +5633,9 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 
 		/* (user+group)*(old+new) structure, inode write (sb,
 		 * inode block, ? - but truncate inode update has it) */
-		handle = pxt4_journal_start(inode, EXT4_HT_QUOTA,
-			(EXT4_MAXQUOTAS_INIT_BLOCKS(inode->i_sb) +
-			 EXT4_MAXQUOTAS_DEL_BLOCKS(inode->i_sb)) + 3);
+		handle = pxt4_journal_start(inode, PXT4_HT_QUOTA,
+			(PXT4_MAXQUOTAS_INIT_BLOCKS(inode->i_sb) +
+			 PXT4_MAXQUOTAS_DEL_BLOCKS(inode->i_sb)) + 3);
 		if (IS_ERR(handle)) {
 			error = PTR_ERR(handle);
 			goto err_out;
@@ -5644,9 +5644,9 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 		/* dquot_transfer() calls back pxt4_get_inode_usage() which
 		 * counts xattr inode references.
 		 */
-		down_read(&EXT4_I(inode)->xattr_sem);
+		down_read(&PXT4_I(inode)->xattr_sem);
 		error = dquot_transfer(inode, attr);
-		up_read(&EXT4_I(inode)->xattr_sem);
+		up_read(&PXT4_I(inode)->xattr_sem);
 
 		if (error) {
 			pxt4_journal_stop(handle);
@@ -5668,8 +5668,8 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 		loff_t old_disksize;
 		int shrink = (attr->ia_size < inode->i_size);
 
-		if (!(pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS))) {
-			struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+		if (!(pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS))) {
+			struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 			if (attr->ia_size > sbi->s_bitmap_maxbytes)
 				return -EFBIG;
@@ -5694,16 +5694,16 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 			inode_dio_wait(inode);
 		}
 
-		down_write(&EXT4_I(inode)->i_mmap_sem);
+		down_write(&PXT4_I(inode)->i_mmap_sem);
 
 		rc = pxt4_break_layouts(inode);
 		if (rc) {
-			up_write(&EXT4_I(inode)->i_mmap_sem);
+			up_write(&PXT4_I(inode)->i_mmap_sem);
 			return rc;
 		}
 
 		if (attr->ia_size != inode->i_size) {
-			handle = pxt4_journal_start(inode, EXT4_HT_INODE, 3);
+			handle = pxt4_journal_start(inode, PXT4_HT_INODE, 3);
 			if (IS_ERR(handle)) {
 				error = PTR_ERR(handle);
 				goto out_mmap_sem;
@@ -5720,9 +5720,9 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 				inode->i_mtime = current_time(inode);
 				inode->i_ctime = inode->i_mtime;
 			}
-			down_write(&EXT4_I(inode)->i_data_sem);
-			old_disksize = EXT4_I(inode)->i_disksize;
-			EXT4_I(inode)->i_disksize = attr->ia_size;
+			down_write(&PXT4_I(inode)->i_data_sem);
+			old_disksize = PXT4_I(inode)->i_disksize;
+			PXT4_I(inode)->i_disksize = attr->ia_size;
 			rc = pxt4_mark_inode_dirty(handle, inode);
 			if (!error)
 				error = rc;
@@ -5734,8 +5734,8 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 			if (!error)
 				i_size_write(inode, attr->ia_size);
 			else
-				EXT4_I(inode)->i_disksize = old_disksize;
-			up_write(&EXT4_I(inode)->i_data_sem);
+				PXT4_I(inode)->i_disksize = old_disksize;
+			up_write(&PXT4_I(inode)->i_data_sem);
 			pxt4_journal_stop(handle);
 			if (error)
 				goto out_mmap_sem;
@@ -5762,7 +5762,7 @@ int pxt4_setattr(struct dentry *dentry, struct iattr *attr)
 				error = rc;
 		}
 out_mmap_sem:
-		up_write(&EXT4_I(inode)->i_mmap_sem);
+		up_write(&PXT4_I(inode)->i_mmap_sem);
 	}
 
 	if (!error) {
@@ -5792,25 +5792,25 @@ int pxt4_getattr(const struct path *path, struct kstat *stat,
 {
 	struct inode *inode = d_inode(path->dentry);
 	struct pxt4_inode *raw_inode;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	unsigned int flags;
 
-	if (EXT4_FITS_IN_INODE(raw_inode, ei, i_crtime)) {
+	if (PXT4_FITS_IN_INODE(raw_inode, ei, i_crtime)) {
 		stat->result_mask |= STATX_BTIME;
 		stat->btime.tv_sec = ei->i_crtime.tv_sec;
 		stat->btime.tv_nsec = ei->i_crtime.tv_nsec;
 	}
 
-	flags = ei->i_flags & EXT4_FL_USER_VISIBLE;
-	if (flags & EXT4_APPEND_FL)
+	flags = ei->i_flags & PXT4_FL_USER_VISIBLE;
+	if (flags & PXT4_APPEND_FL)
 		stat->attributes |= STATX_ATTR_APPEND;
-	if (flags & EXT4_COMPR_FL)
+	if (flags & PXT4_COMPR_FL)
 		stat->attributes |= STATX_ATTR_COMPRESSED;
-	if (flags & EXT4_ENCRYPT_FL)
+	if (flags & PXT4_ENCRYPT_FL)
 		stat->attributes |= STATX_ATTR_ENCRYPTED;
-	if (flags & EXT4_IMMUTABLE_FL)
+	if (flags & PXT4_IMMUTABLE_FL)
 		stat->attributes |= STATX_ATTR_IMMUTABLE;
-	if (flags & EXT4_NODUMP_FL)
+	if (flags & PXT4_NODUMP_FL)
 		stat->attributes |= STATX_ATTR_NODUMP;
 
 	stat->attributes_mask |= (STATX_ATTR_APPEND |
@@ -5850,8 +5850,8 @@ int pxt4_file_getattr(const struct path *path, struct kstat *stat,
 	 * will return the blocks that include the delayed allocation
 	 * blocks for this file.
 	 */
-	delalloc_blocks = EXT4_C2B(EXT4_SB(inode->i_sb),
-				   EXT4_I(inode)->i_reserved_data_blocks);
+	delalloc_blocks = PXT4_C2B(PXT4_SB(inode->i_sb),
+				   PXT4_I(inode)->i_reserved_data_blocks);
 	stat->blocks += delalloc_blocks << (inode->i_sb->s_blocksize_bits - 9);
 	return 0;
 }
@@ -5859,7 +5859,7 @@ int pxt4_file_getattr(const struct path *path, struct kstat *stat,
 static int pxt4_index_trans_blocks(struct inode *inode, int lblocks,
 				   int pextents)
 {
-	if (!(pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)))
+	if (!(pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)))
 		return pxt4_ind_trans_blocks(inode, lblocks);
 	return pxt4_ext_index_trans_blocks(inode, pextents);
 }
@@ -5899,14 +5899,14 @@ static int pxt4_meta_trans_blocks(struct inode *inode, int lblocks,
 	gdpblocks = groups;
 	if (groups > ngroups)
 		groups = ngroups;
-	if (groups > EXT4_SB(inode->i_sb)->s_gdb_count)
-		gdpblocks = EXT4_SB(inode->i_sb)->s_gdb_count;
+	if (groups > PXT4_SB(inode->i_sb)->s_gdb_count)
+		gdpblocks = PXT4_SB(inode->i_sb)->s_gdb_count;
 
 	/* bitmaps and block group descriptor blocks */
 	ret += groups + gdpblocks;
 
 	/* Blocks for super block, inode, quota and xattr blocks */
-	ret += EXT4_META_TRANS_BLOCKS(inode->i_sb);
+	ret += PXT4_META_TRANS_BLOCKS(inode->i_sb);
 
 	return ret;
 }
@@ -5957,7 +5957,7 @@ int pxt4_mark_iloc_dirty(handle_t *handle,
 {
 	int err = 0;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb)))) {
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb)))) {
 		put_bh(iloc->bh);
 		return -EIO;
 	}
@@ -5984,7 +5984,7 @@ pxt4_reserve_inode_write(handle_t *handle, struct inode *inode,
 {
 	int err;
 
-	if (unlikely(pxt4_forced_shutdown(EXT4_SB(inode->i_sb))))
+	if (unlikely(pxt4_forced_shutdown(PXT4_SB(inode->i_sb))))
 		return -EIO;
 
 	err = pxt4_get_inode_loc(inode, iloc);
@@ -6007,21 +6007,21 @@ static int __pxt4_expand_extra_isize(struct inode *inode,
 {
 	struct pxt4_inode *raw_inode;
 	struct pxt4_xattr_ibody_header *header;
-	unsigned int inode_size = EXT4_INODE_SIZE(inode->i_sb);
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	unsigned int inode_size = PXT4_INODE_SIZE(inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	int error;
 
 	/* this was checked at iget time, but double check for good measure */
-	if ((EXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize > inode_size) ||
+	if ((PXT4_GOOD_OLD_INODE_SIZE + ei->i_extra_isize > inode_size) ||
 	    (ei->i_extra_isize & 3)) {
-		EXT4_ERROR_INODE(inode, "bad extra_isize %u (inode size %u)",
+		PXT4_ERROR_INODE(inode, "bad extra_isize %u (inode size %u)",
 				 ei->i_extra_isize,
-				 EXT4_INODE_SIZE(inode->i_sb));
+				 PXT4_INODE_SIZE(inode->i_sb));
 		return -EFSCORRUPTED;
 	}
 	if ((new_extra_isize < ei->i_extra_isize) ||
 	    (new_extra_isize < 4) ||
-	    (new_extra_isize > inode_size - EXT4_GOOD_OLD_INODE_SIZE))
+	    (new_extra_isize > inode_size - PXT4_GOOD_OLD_INODE_SIZE))
 		return -EINVAL;	/* Should never happen */
 
 	raw_inode = pxt4_raw_inode(iloc);
@@ -6029,12 +6029,12 @@ static int __pxt4_expand_extra_isize(struct inode *inode,
 	header = IHDR(inode, raw_inode);
 
 	/* No extended attributes present */
-	if (!pxt4_test_inode_state(inode, EXT4_STATE_XATTR) ||
-	    header->h_magic != cpu_to_le32(EXT4_XATTR_MAGIC)) {
-		memset((void *)raw_inode + EXT4_GOOD_OLD_INODE_SIZE +
-		       EXT4_I(inode)->i_extra_isize, 0,
-		       new_extra_isize - EXT4_I(inode)->i_extra_isize);
-		EXT4_I(inode)->i_extra_isize = new_extra_isize;
+	if (!pxt4_test_inode_state(inode, PXT4_STATE_XATTR) ||
+	    header->h_magic != cpu_to_le32(PXT4_XATTR_MAGIC)) {
+		memset((void *)raw_inode + PXT4_GOOD_OLD_INODE_SIZE +
+		       PXT4_I(inode)->i_extra_isize, 0,
+		       new_extra_isize - PXT4_I(inode)->i_extra_isize);
+		PXT4_I(inode)->i_extra_isize = new_extra_isize;
 		return 0;
 	}
 
@@ -6063,7 +6063,7 @@ static int pxt4_try_to_expand_extra_isize(struct inode *inode,
 	int no_expand;
 	int error;
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_NO_EXPAND))
+	if (pxt4_test_inode_state(inode, PXT4_STATE_NO_EXPAND))
 		return -EOVERFLOW;
 
 	/*
@@ -6077,7 +6077,7 @@ static int pxt4_try_to_expand_extra_isize(struct inode *inode,
 	 */
 	if (pxt4_handle_valid(handle) &&
 	    jbd3_journal_extend(handle,
-				EXT4_DATA_TRANS_BLOCKS(inode->i_sb)) != 0)
+				PXT4_DATA_TRANS_BLOCKS(inode->i_sb)) != 0)
 		return -ENOSPC;
 
 	if (pxt4_write_trylock_xattr(inode, &no_expand) == 0)
@@ -6098,13 +6098,13 @@ int pxt4_expand_extra_isize(struct inode *inode,
 	int no_expand;
 	int error, rc;
 
-	if (pxt4_test_inode_state(inode, EXT4_STATE_NO_EXPAND)) {
+	if (pxt4_test_inode_state(inode, PXT4_STATE_NO_EXPAND)) {
 		brelse(iloc->bh);
 		return -EOVERFLOW;
 	}
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE,
-				    EXT4_DATA_TRANS_BLOCKS(inode->i_sb));
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE,
+				    PXT4_DATA_TRANS_BLOCKS(inode->i_sb));
 	if (IS_ERR(handle)) {
 		error = PTR_ERR(handle);
 		brelse(iloc->bh);
@@ -6149,7 +6149,7 @@ out_unlock:
 int pxt4_mark_inode_dirty(handle_t *handle, struct inode *inode)
 {
 	struct pxt4_iloc iloc;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 	int err;
 
 	might_sleep();
@@ -6158,7 +6158,7 @@ int pxt4_mark_inode_dirty(handle_t *handle, struct inode *inode)
 	if (err)
 		return err;
 
-	if (EXT4_I(inode)->i_extra_isize < sbi->s_want_extra_isize)
+	if (PXT4_I(inode)->i_extra_isize < sbi->s_want_extra_isize)
 		pxt4_try_to_expand_extra_isize(inode, sbi->s_want_extra_isize,
 					       iloc, handle);
 
@@ -6189,7 +6189,7 @@ void pxt4_dirty_inode(struct inode *inode, int flags)
 
 	if (flags == I_DIRTY_TIME)
 		return;
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 2);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 2);
 	if (IS_ERR(handle))
 		goto out;
 
@@ -6205,7 +6205,7 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 	journal_t *journal;
 	handle_t *handle;
 	int err;
-	struct pxt4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(inode->i_sb);
 
 	/*
 	 * We have to be very careful here: changing a data block's
@@ -6217,7 +6217,7 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 	 * nobody is changing anything.
 	 */
 
-	journal = EXT4_JOURNAL(inode);
+	journal = PXT4_JOURNAL(inode);
 	if (!journal)
 		return 0;
 	if (is_journal_aborted(journal))
@@ -6235,10 +6235,10 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 	 * data (and journalled aops don't know how to handle these cases).
 	 */
 	if (val) {
-		down_write(&EXT4_I(inode)->i_mmap_sem);
+		down_write(&PXT4_I(inode)->i_mmap_sem);
 		err = filemap_write_and_wait(inode->i_mapping);
 		if (err < 0) {
-			up_write(&EXT4_I(inode)->i_mmap_sem);
+			up_write(&PXT4_I(inode)->i_mmap_sem);
 			return err;
 		}
 	}
@@ -6255,7 +6255,7 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 	 */
 
 	if (val)
-		pxt4_set_inode_flag(inode, EXT4_INODE_JOURNAL_DATA);
+		pxt4_set_inode_flag(inode, PXT4_INODE_JOURNAL_DATA);
 	else {
 		err = jbd3_journal_flush(journal);
 		if (err < 0) {
@@ -6263,7 +6263,7 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 			percpu_up_write(&sbi->s_writepages_rwsem);
 			return err;
 		}
-		pxt4_clear_inode_flag(inode, EXT4_INODE_JOURNAL_DATA);
+		pxt4_clear_inode_flag(inode, PXT4_INODE_JOURNAL_DATA);
 	}
 	pxt4_set_aops(inode);
 
@@ -6271,11 +6271,11 @@ int pxt4_change_inode_journal_flag(struct inode *inode, int val)
 	percpu_up_write(&sbi->s_writepages_rwsem);
 
 	if (val)
-		up_write(&EXT4_I(inode)->i_mmap_sem);
+		up_write(&PXT4_I(inode)->i_mmap_sem);
 
 	/* Finally we can mark the inode as dirty. */
 
-	handle = pxt4_journal_start(inode, EXT4_HT_INODE, 1);
+	handle = pxt4_journal_start(inode, PXT4_HT_INODE, 1);
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -6313,7 +6313,7 @@ vm_fault_t pxt4_page_mkwrite(struct vm_fault *vmf)
 	sb_start_pagefault(inode->i_sb);
 	file_update_time(vma->vm_file);
 
-	down_read(&EXT4_I(inode)->i_mmap_sem);
+	down_read(&PXT4_I(inode)->i_mmap_sem);
 
 	err = pxt4_convert_inline_data(inode);
 	if (err)
@@ -6365,7 +6365,7 @@ vm_fault_t pxt4_page_mkwrite(struct vm_fault *vmf)
 	else
 		get_block = pxt4_get_block;
 retry_alloc:
-	handle = pxt4_journal_start(inode, EXT4_HT_WRITE_PAGE,
+	handle = pxt4_journal_start(inode, PXT4_HT_WRITE_PAGE,
 				    pxt4_writepage_trans_blocks(inode));
 	if (IS_ERR(handle)) {
 		ret = VM_FAULT_SIGBUS;
@@ -6380,7 +6380,7 @@ retry_alloc:
 			pxt4_journal_stop(handle);
 			goto out;
 		}
-		pxt4_set_inode_state(inode, EXT4_STATE_JDATA);
+		pxt4_set_inode_state(inode, PXT4_STATE_JDATA);
 	}
 	pxt4_journal_stop(handle);
 	if (err == -ENOSPC && pxt4_should_retry_alloc(inode->i_sb, &retries))
@@ -6388,7 +6388,7 @@ retry_alloc:
 out_ret:
 	ret = block_page_mkwrite_return(err);
 out:
-	up_read(&EXT4_I(inode)->i_mmap_sem);
+	up_read(&PXT4_I(inode)->i_mmap_sem);
 	sb_end_pagefault(inode->i_sb);
 	return ret;
 }
@@ -6398,9 +6398,9 @@ vm_fault_t pxt4_filemap_fault(struct vm_fault *vmf)
 	struct inode *inode = file_inode(vmf->vma->vm_file);
 	vm_fault_t ret;
 
-	down_read(&EXT4_I(inode)->i_mmap_sem);
+	down_read(&PXT4_I(inode)->i_mmap_sem);
 	ret = filemap_fault(vmf);
-	up_read(&EXT4_I(inode)->i_mmap_sem);
+	up_read(&PXT4_I(inode)->i_mmap_sem);
 
 	return ret;
 }

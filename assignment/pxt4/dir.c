@@ -47,7 +47,7 @@ static int is_dx_dir(struct inode *inode)
 	struct super_block *sb = inode->i_sb;
 
 	if (pxt4_has_feature_dir_index(inode->i_sb) &&
-	    ((pxt4_test_inode_flag(inode, EXT4_INODE_INDEX)) ||
+	    ((pxt4_test_inode_flag(inode, PXT4_INODE_INDEX)) ||
 	     ((inode->i_size >> sb->s_blocksize_bits) == 1) ||
 	     pxt4_has_inline_data(inode)))
 		return 1;
@@ -58,7 +58,7 @@ static int is_dx_dir(struct inode *inode)
 /*
  * Return 0 if the directory entry is OK, and 1 if there is a problem
  *
- * Note: this is the opposite of what ext2 and ext3 historically returned...
+ * Note: this is the opposite of what pxt2 and ext3 historically returned...
  *
  * bh passed here can be an inode block or a dir data block, depending
  * on the inode inline data flag.
@@ -73,21 +73,21 @@ int __pxt4_check_dir_entry(const char *function, unsigned int line,
 	const int rlen = pxt4_rec_len_from_disk(de->rec_len,
 						dir->i_sb->s_blocksize);
 
-	if (unlikely(rlen < EXT4_DIR_REC_LEN(1)))
+	if (unlikely(rlen < PXT4_DIR_REC_LEN(1)))
 		error_msg = "rec_len is smaller than minimal";
 	else if (unlikely(rlen % 4 != 0))
 		error_msg = "rec_len % 4 != 0";
-	else if (unlikely(rlen < EXT4_DIR_REC_LEN(de->name_len)))
+	else if (unlikely(rlen < PXT4_DIR_REC_LEN(de->name_len)))
 		error_msg = "rec_len is too small for name_len";
 	else if (unlikely(((char *) de - buf) + rlen > size))
 		error_msg = "directory entry overrun";
 	else if (unlikely(((char *) de - buf) + rlen >
-			  size - EXT4_DIR_REC_LEN(1) &&
+			  size - PXT4_DIR_REC_LEN(1) &&
 			  ((char *) de - buf) + rlen != size)) {
 		error_msg = "directory entry too close to block end";
 	}
 	else if (unlikely(le32_to_cpu(de->inode) >
-			le32_to_cpu(EXT4_SB(dir->i_sb)->s_es->s_inodes_count)))
+			le32_to_cpu(PXT4_SB(dir->i_sb)->s_es->s_inodes_count)))
 		error_msg = "inode out of bounds";
 	else
 		return 0;
@@ -136,7 +136,7 @@ static int pxt4_readdir(struct file *file, struct dir_context *ctx)
 			 * We don't set the inode dirty flag since it's not
 			 * critical that it gets flushed back to the disk.
 			 */
-			pxt4_clear_inode_flag(inode, EXT4_INODE_INDEX);
+			pxt4_clear_inode_flag(inode, PXT4_INODE_INDEX);
 		}
 	}
 
@@ -149,7 +149,7 @@ static int pxt4_readdir(struct file *file, struct dir_context *ctx)
 	}
 
 	if (IS_ENCRYPTED(inode)) {
-		err = fscrypt_fname_alloc_buffer(inode, EXT4_NAME_LEN, &fstr);
+		err = fscrypt_fname_alloc_buffer(inode, PXT4_NAME_LEN, &fstr);
 		if (err < 0)
 			return err;
 	}
@@ -163,7 +163,7 @@ static int pxt4_readdir(struct file *file, struct dir_context *ctx)
 		}
 		cond_resched();
 		offset = ctx->pos & (sb->s_blocksize - 1);
-		map.m_lblk = ctx->pos >> EXT4_BLOCK_SIZE_BITS(sb);
+		map.m_lblk = ctx->pos >> PXT4_BLOCK_SIZE_BITS(sb);
 		map.m_len = 1;
 		err = pxt4_map_blocks(NULL, inode, &map, 0);
 		if (err == 0) {
@@ -202,7 +202,7 @@ static int pxt4_readdir(struct file *file, struct dir_context *ctx)
 		/* Check the checksum */
 		if (!buffer_verified(bh) &&
 		    !pxt4_dirblock_csum_verify(inode, bh)) {
-			EXT4_ERROR_FILE(file, 0, "directory fails checksum "
+			PXT4_ERROR_FILE(file, 0, "directory fails checksum "
 					"at offset %llu",
 					(unsigned long long)ctx->pos);
 			ctx->pos += sb->s_blocksize - offset;
@@ -227,7 +227,7 @@ static int pxt4_readdir(struct file *file, struct dir_context *ctx)
 				 * failure will be detected in the
 				 * dirent test below. */
 				if (pxt4_rec_len_from_disk(de->rec_len,
-					sb->s_blocksize) < EXT4_DIR_REC_LEN(1))
+					sb->s_blocksize) < PXT4_DIR_REC_LEN(1))
 					break;
 				i += pxt4_rec_len_from_disk(de->rec_len,
 							    sb->s_blocksize);
@@ -349,9 +349,9 @@ static inline loff_t pxt4_get_htree_eof(struct file *filp)
 {
 	if ((filp->f_mode & FMODE_32BITHASH) ||
 	    (!(filp->f_mode & FMODE_64BITHASH) && is_32bit_api()))
-		return EXT4_HTREE_EOF_32BIT;
+		return PXT4_HTREE_EOF_32BIT;
 	else
-		return EXT4_HTREE_EOF_64BIT;
+		return PXT4_HTREE_EOF_64BIT;
 }
 
 
@@ -680,7 +680,7 @@ static int pxt4_d_compare(const struct dentry *dentry, unsigned int len,
 	char strbuf[DNAME_INLINE_LEN];
 
 	if (!inode || !IS_CASEFOLDED(inode) ||
-	    !EXT4_SB(inode->i_sb)->s_encoding) {
+	    !PXT4_SB(inode->i_sb)->s_encoding) {
 		if (len != name->len)
 			return -1;
 		return memcmp(str, name->name, len);
@@ -706,7 +706,7 @@ static int pxt4_d_compare(const struct dentry *dentry, unsigned int len,
 
 static int pxt4_d_hash(const struct dentry *dentry, struct qstr *str)
 {
-	const struct pxt4_sb_info *sbi = EXT4_SB(dentry->d_sb);
+	const struct pxt4_sb_info *sbi = PXT4_SB(dentry->d_sb);
 	const struct unicode_map *um = sbi->s_encoding;
 	const struct inode *inode = READ_ONCE(dentry->d_inode);
 	unsigned char *norm;

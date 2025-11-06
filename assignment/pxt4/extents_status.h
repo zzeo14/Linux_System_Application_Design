@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef _EXT4_EXTENTS_STATUS_H
-#define _EXT4_EXTENTS_STATUS_H
+#ifndef _PXT4_EXTENTS_STATUS_H
+#define _PXT4_EXTENTS_STATUS_H
 
 /*
  * Turn on ES_DEBUG__ to get lots of info about extent status operations.
@@ -249,4 +249,4 @@ extern unsigned int pxt4_es_delayed_clu(struct inode *inode, pxt4_lblk_t lblk,
 					pxt4_lblk_t len);
 extern void pxt4_clear_inode_es(struct inode *inode);
 
-#endif /* _EXT4_EXTENTS_STATUS_H */
+#endif /* _PXT4_EXTENTS_STATUS_H */

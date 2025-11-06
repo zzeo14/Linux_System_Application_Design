@@ -264,8 +264,8 @@ static int __pxt4fs_dirhash(const char *name, int len,
 		return -1;
 	}
 	hash = hash & ~1;
-	if (hash == (EXT4_HTREE_EOF_32BIT << 1))
-		hash = (EXT4_HTREE_EOF_32BIT - 1) << 1;
+	if (hash == (PXT4_HTREE_EOF_32BIT << 1))
+		hash = (PXT4_HTREE_EOF_32BIT - 1) << 1;
 	hinfo->hash = hash;
 	hinfo->minor_hash = minor_hash;
 	return 0;
@@ -275,7 +275,7 @@ int pxt4fs_dirhash(const struct inode *dir, const char *name, int len,
 		   struct dx_hash_info *hinfo)
 {
 #ifdef CONFIG_UNICODE
-	const struct unicode_map *um = EXT4_SB(dir->i_sb)->s_encoding;
+	const struct unicode_map *um = PXT4_SB(dir->i_sb)->s_encoding;
 	int r, dlen;
 	unsigned char *buff;
 	struct qstr qstr = {.name = name, .len = len };

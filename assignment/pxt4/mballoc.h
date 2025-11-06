@@ -5,8 +5,8 @@
  *  Written by: Alex Tomas <alex@clusterfs.com>
  *
  */
-#ifndef _EXT4_MBALLOC_H
-#define _EXT4_MBALLOC_H
+#ifndef _PXT4_MBALLOC_H
+#define _PXT4_MBALLOC_H
 
 #include <linux/time.h>
 #include <linux/fs.h>
@@ -25,7 +25,7 @@
 
 /*
  */
-#ifdef CONFIG_EXT4_DEBUG
+#ifdef CONFIG_PXT4_DEBUG
 extern ushort pxt4_mballoc_debug;
 
 #define mb_debug(n, fmt, ...)	                                        \
@@ -39,8 +39,8 @@ do {									\
 #define mb_debug(n, fmt, ...)	no_printk(fmt, ##__VA_ARGS__)
 #endif
 
-#define EXT4_MB_HISTORY_ALLOC		1	/* allocation */
-#define EXT4_MB_HISTORY_PREALLOC	2	/* preallocated blocks used */
+#define PXT4_MB_HISTORY_ALLOC		1	/* allocation */
+#define PXT4_MB_HISTORY_PREALLOC	2	/* preallocated blocks used */
 
 /*
  * How long mballoc can look for a best extent (in found extents)
@@ -196,7 +196,7 @@ static inline pxt4_fsblk_t pxt4_grp_offs_to_block(struct super_block *sb,
 					struct pxt4_free_extent *fex)
 {
 	return pxt4_group_first_block_no(sb, fex->fe_group) +
-		(fex->fe_start << EXT4_SB(sb)->s_cluster_bits);
+		(fex->fe_start << PXT4_SB(sb)->s_cluster_bits);
 }
 
 typedef int (*pxt4_mballoc_query_range_fn)(

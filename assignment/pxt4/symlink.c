@@ -36,8 +36,8 @@ static const char *pxt4_encrypted_get_link(struct dentry *dentry,
 		return ERR_PTR(-ECHILD);
 
 	if (pxt4_inode_is_fast_symlink(inode)) {
-		caddr = EXT4_I(inode)->i_data;
-		max_size = sizeof(EXT4_I(inode)->i_data);
+		caddr = PXT4_I(inode)->i_data;
+		max_size = sizeof(PXT4_I(inode)->i_data);
 	} else {
 		cpage = read_mapping_page(inode->i_mapping, 0, NULL);
 		if (IS_ERR(cpage))

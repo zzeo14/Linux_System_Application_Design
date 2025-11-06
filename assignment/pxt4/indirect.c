@@ -75,9 +75,9 @@ static int pxt4_block_to_path(struct inode *inode,
 			      pxt4_lblk_t i_block,
 			      pxt4_lblk_t offsets[4], int *boundary)
 {
-	int ptrs = EXT4_ADDR_PER_BLOCK(inode->i_sb);
-	int ptrs_bits = EXT4_ADDR_PER_BLOCK_BITS(inode->i_sb);
-	const long direct_blocks = EXT4_NDIR_BLOCKS,
+	int ptrs = PXT4_ADDR_PER_BLOCK(inode->i_sb);
+	int ptrs_bits = PXT4_ADDR_PER_BLOCK_BITS(inode->i_sb);
+	const long direct_blocks = PXT4_NDIR_BLOCKS,
 		indirect_blocks = ptrs,
 		double_blocks = (1 << (ptrs_bits * 2));
 	int n = 0;
@@ -87,16 +87,16 @@ static int pxt4_block_to_path(struct inode *inode,
 		offsets[n++] = i_block;
 		final = direct_blocks;
 	} else if ((i_block -= direct_blocks) < indirect_blocks) {
-		offsets[n++] = EXT4_IND_BLOCK;
+		offsets[n++] = PXT4_IND_BLOCK;
 		offsets[n++] = i_block;
 		final = ptrs;
 	} else if ((i_block -= indirect_blocks) < double_blocks) {
-		offsets[n++] = EXT4_DIND_BLOCK;
+		offsets[n++] = PXT4_DIND_BLOCK;
 		offsets[n++] = i_block >> ptrs_bits;
 		offsets[n++] = i_block & (ptrs - 1);
 		final = ptrs;
 	} else if (((i_block -= double_blocks) >> (ptrs_bits * 2)) < ptrs) {
-		offsets[n++] = EXT4_TIND_BLOCK;
+		offsets[n++] = PXT4_TIND_BLOCK;
 		offsets[n++] = i_block >> (ptrs_bits * 2);
 		offsets[n++] = (i_block >> ptrs_bits) & (ptrs - 1);
 		offsets[n++] = i_block & (ptrs - 1);
@@ -139,7 +139,7 @@ static int pxt4_block_to_path(struct inode *inode,
  *	the whole chain, all way to the data (returns %NULL, *err == 0).
  *
  *      Need to be called with
- *      down_read(&EXT4_I(inode)->i_data_sem)
+ *      down_read(&PXT4_I(inode)->i_data_sem)
  */
 static Indirect *pxt4_get_branch(struct inode *inode, int depth,
 				 pxt4_lblk_t  *offsets,
@@ -152,7 +152,7 @@ static Indirect *pxt4_get_branch(struct inode *inode, int depth,
 
 	*err = 0;
 	/* i_data is not going away, no lock needed */
-	add_chain(chain, NULL, EXT4_I(inode)->i_data + *offsets);
+	add_chain(chain, NULL, PXT4_I(inode)->i_data + *offsets);
 	if (!p->key)
 		goto no_block;
 	while (--depth) {
@@ -209,7 +209,7 @@ no_block:
  */
 static pxt4_fsblk_t pxt4_find_near(struct inode *inode, Indirect *ind)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	__le32 *start = ind->bh ? (__le32 *) ind->bh->b_data : ei->i_data;
 	__le32 *p;
 
@@ -251,7 +251,7 @@ static pxt4_fsblk_t pxt4_find_goal(struct inode *inode, pxt4_lblk_t block,
 	 */
 
 	goal = pxt4_find_near(inode, partial);
-	goal = goal & EXT4_MAX_BLOCK_FILE_PHYS;
+	goal = goal & PXT4_MAX_BLOCK_FILE_PHYS;
 	return goal;
 }
 
@@ -334,7 +334,7 @@ static int pxt4_alloc_branch(handle_t *handle,
 		} else
 			ar->goal = new_blocks[i] = pxt4_new_meta_blocks(handle,
 					ar->inode, ar->goal,
-					ar->flags & EXT4_MB_DELALLOC_RESERVED,
+					ar->flags & PXT4_MB_DELALLOC_RESERVED,
 					NULL, &err);
 		if (err) {
 			i--;
@@ -467,10 +467,10 @@ err_out:
 		/*
 		 * branch[i].bh is newly allocated, so there is no
 		 * need to revoke the block, which is why we don't
-		 * need to set EXT4_FREE_BLOCKS_METADATA.
+		 * need to set PXT4_FREE_BLOCKS_METADATA.
 		 */
 		pxt4_free_blocks(handle, ar->inode, where[i].bh, 0, 1,
-				 EXT4_FREE_BLOCKS_FORGET);
+				 PXT4_FREE_BLOCKS_FORGET);
 	}
 	pxt4_free_blocks(handle, ar->inode, NULL, le32_to_cpu(where[num].key),
 			 ar->len, 0);
@@ -501,9 +501,9 @@ err_out:
  * return < 0, error case.
  *
  * The pxt4_ind_get_blocks() function should be called with
- * down_write(&EXT4_I(inode)->i_data_sem) if allocating filesystem
- * blocks (i.e., flags has EXT4_GET_BLOCKS_CREATE set) or
- * down_read(&EXT4_I(inode)->i_data_sem) if not allocating file system
+ * down_write(&PXT4_I(inode)->i_data_sem) if allocating filesystem
+ * blocks (i.e., flags has PXT4_GET_BLOCKS_CREATE set) or
+ * down_read(&PXT4_I(inode)->i_data_sem) if not allocating file system
  * blocks.
  */
 int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
@@ -522,8 +522,8 @@ int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
 	pxt4_fsblk_t first_block = 0;
 
 	trace_pxt4_ind_map_blocks_enter(inode, map->m_lblk, map->m_len, flags);
-	J_ASSERT(!(pxt4_test_inode_flag(inode, EXT4_INODE_EXTENTS)));
-	J_ASSERT(handle != NULL || (flags & EXT4_GET_BLOCKS_CREATE) == 0);
+	J_ASSERT(!(pxt4_test_inode_flag(inode, PXT4_INODE_EXTENTS)));
+	J_ASSERT(handle != NULL || (flags & PXT4_GET_BLOCKS_CREATE) == 0);
 	depth = pxt4_block_to_path(inode, map->m_lblk, offsets,
 				   &blocks_to_boundary);
 
@@ -551,7 +551,7 @@ int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
 	}
 
 	/* Next simple case - plain lookup failed */
-	if ((flags & EXT4_GET_BLOCKS_CREATE) == 0) {
+	if ((flags & PXT4_GET_BLOCKS_CREATE) == 0) {
 		unsigned epb = inode->i_sb->s_blocksize / sizeof(u32);
 		int i;
 
@@ -579,7 +579,7 @@ int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
 	 * Okay, we need to do block allocation.
 	*/
 	if (pxt4_has_feature_bigalloc(inode->i_sb)) {
-		EXT4_ERROR_INODE(inode, "Can't allocate blocks for "
+		PXT4_ERROR_INODE(inode, "Can't allocate blocks for "
 				 "non-extent mapped inodes with bigalloc");
 		return -EFSCORRUPTED;
 	}
@@ -589,11 +589,11 @@ int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
 	ar.inode = inode;
 	ar.logical = map->m_lblk;
 	if (S_ISREG(inode->i_mode))
-		ar.flags = EXT4_MB_HINT_DATA;
-	if (flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE)
-		ar.flags |= EXT4_MB_DELALLOC_RESERVED;
-	if (flags & EXT4_GET_BLOCKS_METADATA_NOFAIL)
-		ar.flags |= EXT4_MB_USE_RESERVED;
+		ar.flags = PXT4_MB_HINT_DATA;
+	if (flags & PXT4_GET_BLOCKS_DELALLOC_RESERVE)
+		ar.flags |= PXT4_MB_DELALLOC_RESERVED;
+	if (flags & PXT4_GET_BLOCKS_METADATA_NOFAIL)
+		ar.flags |= PXT4_MB_USE_RESERVED;
 
 	ar.goal = pxt4_find_goal(inode, map->m_lblk, partial);
 
@@ -625,16 +625,16 @@ int pxt4_ind_map_blocks(handle_t *handle, struct inode *inode,
 	if (err)
 		goto cleanup;
 
-	map->m_flags |= EXT4_MAP_NEW;
+	map->m_flags |= PXT4_MAP_NEW;
 
 	pxt4_update_inode_fsync_trans(handle, inode, 1);
 	count = ar.len;
 got_it:
-	map->m_flags |= EXT4_MAP_MAPPED;
+	map->m_flags |= PXT4_MAP_MAPPED;
 	map->m_pblk = le32_to_cpu(chain[depth-1].key);
 	map->m_len = count;
 	if (count > blocks_to_boundary)
-		map->m_flags |= EXT4_MAP_BOUNDARY;
+		map->m_flags |= PXT4_MAP_BOUNDARY;
 	err = count;
 	/* Clean up and exit */
 	partial = chain + depth - 1;	/* the whole chain */
@@ -655,14 +655,14 @@ out:
  */
 int pxt4_ind_calc_metadata_amount(struct inode *inode, sector_t lblock)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
-	sector_t dind_mask = ~((sector_t)EXT4_ADDR_PER_BLOCK(inode->i_sb) - 1);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
+	sector_t dind_mask = ~((sector_t)PXT4_ADDR_PER_BLOCK(inode->i_sb) - 1);
 	int blk_bits;
 
-	if (lblock < EXT4_NDIR_BLOCKS)
+	if (lblock < PXT4_NDIR_BLOCKS)
 		return 0;
 
-	lblock -= EXT4_NDIR_BLOCKS;
+	lblock -= PXT4_NDIR_BLOCKS;
 
 	if (ei->i_da_metadata_calc_len &&
 	    (lblock & dind_mask) == ei->i_da_metadata_calc_last_lblock) {
@@ -672,7 +672,7 @@ int pxt4_ind_calc_metadata_amount(struct inode *inode, sector_t lblock)
 	ei->i_da_metadata_calc_last_lblock = lblock & dind_mask;
 	ei->i_da_metadata_calc_len = 1;
 	blk_bits = order_base_2(lblock);
-	return (blk_bits / EXT4_ADDR_PER_BLOCK_BITS(inode->i_sb)) + 1;
+	return (blk_bits / PXT4_ADDR_PER_BLOCK_BITS(inode->i_sb)) + 1;
 }
 
 /*
@@ -683,10 +683,10 @@ int pxt4_ind_trans_blocks(struct inode *inode, int nrblocks)
 {
 	/*
 	 * With N contiguous data blocks, we need at most
-	 * N/EXT4_ADDR_PER_BLOCK(inode->i_sb) + 1 indirect blocks,
+	 * N/PXT4_ADDR_PER_BLOCK(inode->i_sb) + 1 indirect blocks,
 	 * 2 dindirect blocks, and 1 tindirect block
 	 */
-	return DIV_ROUND_UP(nrblocks, EXT4_ADDR_PER_BLOCK(inode->i_sb)) + 4;
+	return DIV_ROUND_UP(nrblocks, PXT4_ADDR_PER_BLOCK(inode->i_sb)) + 4;
 }
 
 /*
@@ -705,7 +705,7 @@ static int try_to_extend_transaction(handle_t *handle, struct inode *inode)
 {
 	if (!pxt4_handle_valid(handle))
 		return 0;
-	if (pxt4_handle_has_enough_credits(handle, EXT4_RESERVE_TRANS_BLOCKS+1))
+	if (pxt4_handle_has_enough_credits(handle, PXT4_RESERVE_TRANS_BLOCKS+1))
 		return 0;
 	if (!pxt4_journal_extend(handle, pxt4_blocks_for_truncate(inode)))
 		return 0;
@@ -827,18 +827,18 @@ static int pxt4_clear_blocks(handle_t *handle, struct inode *inode,
 			     __le32 *last)
 {
 	__le32 *p;
-	int	flags = EXT4_FREE_BLOCKS_VALIDATED;
+	int	flags = PXT4_FREE_BLOCKS_VALIDATED;
 	int	err;
 
 	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode) ||
-	    pxt4_test_inode_flag(inode, EXT4_INODE_EA_INODE))
-		flags |= EXT4_FREE_BLOCKS_FORGET | EXT4_FREE_BLOCKS_METADATA;
+	    pxt4_test_inode_flag(inode, PXT4_INODE_EA_INODE))
+		flags |= PXT4_FREE_BLOCKS_FORGET | PXT4_FREE_BLOCKS_METADATA;
 	else if (pxt4_should_journal_data(inode))
-		flags |= EXT4_FREE_BLOCKS_FORGET;
+		flags |= PXT4_FREE_BLOCKS_FORGET;
 
-	if (!pxt4_data_block_valid(EXT4_SB(inode->i_sb), block_to_free,
+	if (!pxt4_data_block_valid(PXT4_SB(inode->i_sb), block_to_free,
 				   count)) {
-		EXT4_ERROR_INODE(inode, "attempt to clear invalid "
+		PXT4_ERROR_INODE(inode, "attempt to clear invalid "
 				 "blocks %llu len %lu",
 				 (unsigned long long) block_to_free, count);
 		return 1;
@@ -957,10 +957,10 @@ static void pxt4_free_data(handle_t *handle, struct inode *inode,
 		 * block pointed to itself, it would have been detached when
 		 * the block was cleared. Check for this instead of OOPSing.
 		 */
-		if ((EXT4_JOURNAL(inode) == NULL) || bh2jh(this_bh))
+		if ((PXT4_JOURNAL(inode) == NULL) || bh2jh(this_bh))
 			pxt4_handle_dirty_metadata(handle, inode, this_bh);
 		else
-			EXT4_ERROR_INODE(inode,
+			PXT4_ERROR_INODE(inode,
 					 "circular indirect block detected at "
 					 "block %llu",
 				(unsigned long long) this_bh->b_blocknr);
@@ -992,16 +992,16 @@ static void pxt4_free_branches(handle_t *handle, struct inode *inode,
 
 	if (depth--) {
 		struct buffer_head *bh;
-		int addr_per_block = EXT4_ADDR_PER_BLOCK(inode->i_sb);
+		int addr_per_block = PXT4_ADDR_PER_BLOCK(inode->i_sb);
 		p = last;
 		while (--p >= first) {
 			nr = le32_to_cpu(*p);
 			if (!nr)
 				continue;		/* A hole */
 
-			if (!pxt4_data_block_valid(EXT4_SB(inode->i_sb),
+			if (!pxt4_data_block_valid(PXT4_SB(inode->i_sb),
 						   nr, 1)) {
-				EXT4_ERROR_INODE(inode,
+				PXT4_ERROR_INODE(inode,
 						 "invalid indirect mapped "
 						 "block %lu (level %d)",
 						 (unsigned long) nr, depth);
@@ -1016,7 +1016,7 @@ static void pxt4_free_branches(handle_t *handle, struct inode *inode,
 			 * (should be rare).
 			 */
 			if (!bh) {
-				EXT4_ERROR_INODE_BLOCK(inode, nr,
+				PXT4_ERROR_INODE_BLOCK(inode, nr,
 						       "Read failure");
 				continue;
 			}
@@ -1065,8 +1065,8 @@ static void pxt4_free_branches(handle_t *handle, struct inode *inode,
 			 * actually freed.
 			 */
 			pxt4_free_blocks(handle, inode, NULL, nr, 1,
-					 EXT4_FREE_BLOCKS_METADATA|
-					 EXT4_FREE_BLOCKS_FORGET);
+					 PXT4_FREE_BLOCKS_METADATA|
+					 PXT4_FREE_BLOCKS_FORGET);
 
 			if (parent_bh) {
 				/*
@@ -1094,9 +1094,9 @@ static void pxt4_free_branches(handle_t *handle, struct inode *inode,
 
 void pxt4_ind_truncate(handle_t *handle, struct inode *inode)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	__le32 *i_data = ei->i_data;
-	int addr_per_block = EXT4_ADDR_PER_BLOCK(inode->i_sb);
+	int addr_per_block = PXT4_ADDR_PER_BLOCK(inode->i_sb);
 	pxt4_lblk_t offsets[4];
 	Indirect chain[4];
 	Indirect *partial;
@@ -1106,9 +1106,9 @@ void pxt4_ind_truncate(handle_t *handle, struct inode *inode)
 	unsigned blocksize = inode->i_sb->s_blocksize;
 
 	last_block = (inode->i_size + blocksize-1)
-					>> EXT4_BLOCK_SIZE_BITS(inode->i_sb);
-	max_block = (EXT4_SB(inode->i_sb)->s_bitmap_maxbytes + blocksize-1)
-					>> EXT4_BLOCK_SIZE_BITS(inode->i_sb);
+					>> PXT4_BLOCK_SIZE_BITS(inode->i_sb);
+	max_block = (PXT4_SB(inode->i_sb)->s_bitmap_maxbytes + blocksize-1)
+					>> PXT4_BLOCK_SIZE_BITS(inode->i_sb);
 
 	if (last_block != max_block) {
 		n = pxt4_block_to_path(inode, last_block, offsets, NULL);
@@ -1135,7 +1135,7 @@ void pxt4_ind_truncate(handle_t *handle, struct inode *inode)
 		return;
 	} else if (n == 1) {		/* direct blocks */
 		pxt4_free_data(handle, inode, NULL, i_data+offsets[0],
-			       i_data + EXT4_NDIR_BLOCKS);
+			       i_data + PXT4_NDIR_BLOCKS);
 		goto do_indirects;
 	}
 
@@ -1172,27 +1172,27 @@ do_indirects:
 	/* Kill the remaining (whole) subtrees */
 	switch (offsets[0]) {
 	default:
-		nr = i_data[EXT4_IND_BLOCK];
+		nr = i_data[PXT4_IND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 1);
-			i_data[EXT4_IND_BLOCK] = 0;
+			i_data[PXT4_IND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_IND_BLOCK:
-		nr = i_data[EXT4_DIND_BLOCK];
+	case PXT4_IND_BLOCK:
+		nr = i_data[PXT4_DIND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 2);
-			i_data[EXT4_DIND_BLOCK] = 0;
+			i_data[PXT4_DIND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_DIND_BLOCK:
-		nr = i_data[EXT4_TIND_BLOCK];
+	case PXT4_DIND_BLOCK:
+		nr = i_data[PXT4_TIND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 3);
-			i_data[EXT4_TIND_BLOCK] = 0;
+			i_data[PXT4_TIND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_TIND_BLOCK:
+	case PXT4_TIND_BLOCK:
 		;
 	}
 }
@@ -1210,9 +1210,9 @@ do_indirects:
 int pxt4_ind_remove_space(handle_t *handle, struct inode *inode,
 			  pxt4_lblk_t start, pxt4_lblk_t end)
 {
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	__le32 *i_data = ei->i_data;
-	int addr_per_block = EXT4_ADDR_PER_BLOCK(inode->i_sb);
+	int addr_per_block = PXT4_ADDR_PER_BLOCK(inode->i_sb);
 	pxt4_lblk_t offsets[4], offsets2[4];
 	Indirect chain[4], chain2[4];
 	Indirect *partial, *partial2;
@@ -1222,8 +1222,8 @@ int pxt4_ind_remove_space(handle_t *handle, struct inode *inode,
 	int n = 0, n2 = 0;
 	unsigned blocksize = inode->i_sb->s_blocksize;
 
-	max_block = (EXT4_SB(inode->i_sb)->s_bitmap_maxbytes + blocksize-1)
-					>> EXT4_BLOCK_SIZE_BITS(inode->i_sb);
+	max_block = (PXT4_SB(inode->i_sb)->s_bitmap_maxbytes + blocksize-1)
+					>> PXT4_BLOCK_SIZE_BITS(inode->i_sb);
 	if (end >= max_block)
 		end = max_block;
 	if ((start >= end) || (start > max_block))
@@ -1253,7 +1253,7 @@ int pxt4_ind_remove_space(handle_t *handle, struct inode *inode,
 			 * everything to the end of the level.
 			 */
 			pxt4_free_data(handle, inode, NULL, i_data + offsets[0],
-				       i_data + EXT4_NDIR_BLOCKS);
+				       i_data + PXT4_NDIR_BLOCKS);
 			goto end_range;
 		}
 
@@ -1426,31 +1426,31 @@ do_indirects:
 	default:
 		if (++n >= n2)
 			break;
-		nr = i_data[EXT4_IND_BLOCK];
+		nr = i_data[PXT4_IND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 1);
-			i_data[EXT4_IND_BLOCK] = 0;
+			i_data[PXT4_IND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_IND_BLOCK:
+	case PXT4_IND_BLOCK:
 		if (++n >= n2)
 			break;
-		nr = i_data[EXT4_DIND_BLOCK];
+		nr = i_data[PXT4_DIND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 2);
-			i_data[EXT4_DIND_BLOCK] = 0;
+			i_data[PXT4_DIND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_DIND_BLOCK:
+	case PXT4_DIND_BLOCK:
 		if (++n >= n2)
 			break;
-		nr = i_data[EXT4_TIND_BLOCK];
+		nr = i_data[PXT4_TIND_BLOCK];
 		if (nr) {
 			pxt4_free_branches(handle, inode, NULL, &nr, &nr+1, 3);
-			i_data[EXT4_TIND_BLOCK] = 0;
+			i_data[PXT4_TIND_BLOCK] = 0;
 		}
 		/* fall through */
-	case EXT4_TIND_BLOCK:
+	case PXT4_TIND_BLOCK:
 		;
 	}
 	goto cleanup;

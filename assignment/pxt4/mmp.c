@@ -10,7 +10,7 @@
 /* Checksumming functions */
 static __le32 pxt4_mmp_csum(struct super_block *sb, struct mmp_struct *mmp)
 {
-	struct pxt4_sb_info *sbi = EXT4_SB(sb);
+	struct pxt4_sb_info *sbi = PXT4_SB(sb);
 	int offset = offsetof(struct mmp_struct, mmp_checksum);
 	__u32 csum;
 
@@ -95,7 +95,7 @@ static int read_mmp_block(struct super_block *sb, struct buffer_head **bh,
 		goto warn_exit;
 	}
 	mmp = (struct mmp_struct *)((*bh)->b_data);
-	if (le32_to_cpu(mmp->mmp_magic) != EXT4_MMP_MAGIC) {
+	if (le32_to_cpu(mmp->mmp_magic) != PXT4_MMP_MAGIC) {
 		ret = -EFSCORRUPTED;
 		goto warn_exit;
 	}
@@ -133,7 +133,7 @@ static int kmmpd(void *data)
 {
 	struct super_block *sb = ((struct mmpd_data *) data)->sb;
 	struct buffer_head *bh = ((struct mmpd_data *) data)->bh;
-	struct pxt4_super_block *es = EXT4_SB(sb)->s_es;
+	struct pxt4_super_block *es = PXT4_SB(sb)->s_es;
 	struct mmp_struct *mmp;
 	pxt4_fsblk_t mmp_block;
 	u32 seq = 0;
@@ -151,8 +151,8 @@ static int kmmpd(void *data)
 	 * Start with the higher mmp_check_interval and reduce it if
 	 * the MMP block is being updated on time.
 	 */
-	mmp_check_interval = max(EXT4_MMP_CHECK_MULT * mmp_update_interval,
-				 EXT4_MMP_MIN_CHECK_INTERVAL);
+	mmp_check_interval = max(PXT4_MMP_CHECK_MULT * mmp_update_interval,
+				 PXT4_MMP_MIN_CHECK_INTERVAL);
 	mmp->mmp_check_interval = cpu_to_le16(mmp_check_interval);
 	BUILD_BUG_ON(sizeof(mmp->mmp_bdevname) < BDEVNAME_SIZE);
 	bdevname(bh->b_bdev, mmp->mmp_bdevname);
@@ -161,7 +161,7 @@ static int kmmpd(void *data)
 	       sizeof(mmp->mmp_nodename));
 
 	while (!kthread_should_stop()) {
-		if (++seq > EXT4_MMP_SEQ_MAX)
+		if (++seq > PXT4_MMP_SEQ_MAX)
 			seq = 1;
 
 		mmp->mmp_seq = cpu_to_le32(seq);
@@ -180,7 +180,7 @@ static int kmmpd(void *data)
 		}
 
 		if (!(le32_to_cpu(es->s_feature_incompat) &
-		    EXT4_FEATURE_INCOMPAT_MMP)) {
+		    PXT4_FEATURE_INCOMPAT_MMP)) {
 			pxt4_warning(sb, "kmmpd being stopped since MMP feature"
 				     " has been disabled.");
 			goto exit_thread;
@@ -231,22 +231,22 @@ static int kmmpd(void *data)
 		 * Adjust the mmp_check_interval depending on how much time
 		 * it took for the MMP block to be written.
 		 */
-		mmp_check_interval = max(min(EXT4_MMP_CHECK_MULT * diff / HZ,
-					     EXT4_MMP_MAX_CHECK_INTERVAL),
-					 EXT4_MMP_MIN_CHECK_INTERVAL);
+		mmp_check_interval = max(min(PXT4_MMP_CHECK_MULT * diff / HZ,
+					     PXT4_MMP_MAX_CHECK_INTERVAL),
+					 PXT4_MMP_MIN_CHECK_INTERVAL);
 		mmp->mmp_check_interval = cpu_to_le16(mmp_check_interval);
 	}
 
 	/*
 	 * Unmount seems to be clean.
 	 */
-	mmp->mmp_seq = cpu_to_le32(EXT4_MMP_SEQ_CLEAN);
+	mmp->mmp_seq = cpu_to_le32(PXT4_MMP_SEQ_CLEAN);
 	mmp->mmp_time = cpu_to_le64(ktime_get_real_seconds());
 
 	retval = write_mmp_block(sb, bh);
 
 exit_thread:
-	EXT4_SB(sb)->s_mmp_tsk = NULL;
+	PXT4_SB(sb)->s_mmp_tsk = NULL;
 	kfree(data);
 	brelse(bh);
 	return retval;
@@ -254,7 +254,7 @@ exit_thread:
 
 /*
  * Get a random new sequence number but make sure it is not greater than
- * EXT4_MMP_SEQ_MAX.
+ * PXT4_MMP_SEQ_MAX.
  */
 static unsigned int mmp_new_seq(void)
 {
@@ -262,7 +262,7 @@ static unsigned int mmp_new_seq(void)
 
 	do {
 		new_seq = prandom_u32();
-	} while (new_seq > EXT4_MMP_SEQ_MAX);
+	} while (new_seq > PXT4_MMP_SEQ_MAX);
 
 	return new_seq;
 }
@@ -273,7 +273,7 @@ static unsigned int mmp_new_seq(void)
 int pxt4_multi_mount_protect(struct super_block *sb,
 				    pxt4_fsblk_t mmp_block)
 {
-	struct pxt4_super_block *es = EXT4_SB(sb)->s_es;
+	struct pxt4_super_block *es = PXT4_SB(sb)->s_es;
 	struct buffer_head *bh = NULL;
 	struct mmp_struct *mmp = NULL;
 	struct mmpd_data *mmpd_data;
@@ -294,8 +294,8 @@ int pxt4_multi_mount_protect(struct super_block *sb,
 
 	mmp = (struct mmp_struct *)(bh->b_data);
 
-	if (mmp_check_interval < EXT4_MMP_MIN_CHECK_INTERVAL)
-		mmp_check_interval = EXT4_MMP_MIN_CHECK_INTERVAL;
+	if (mmp_check_interval < PXT4_MMP_MIN_CHECK_INTERVAL)
+		mmp_check_interval = PXT4_MMP_MIN_CHECK_INTERVAL;
 
 	/*
 	 * If check_interval in MMP block is larger, use that instead of
@@ -305,10 +305,10 @@ int pxt4_multi_mount_protect(struct super_block *sb,
 		mmp_check_interval = le16_to_cpu(mmp->mmp_check_interval);
 
 	seq = le32_to_cpu(mmp->mmp_seq);
-	if (seq == EXT4_MMP_SEQ_CLEAN)
+	if (seq == PXT4_MMP_SEQ_CLEAN)
 		goto skip;
 
-	if (seq == EXT4_MMP_SEQ_FSCK) {
+	if (seq == PXT4_MMP_SEQ_FSCK) {
 		dump_mmp_msg(sb, mmp, "fsck is running on the filesystem");
 		goto failed;
 	}
@@ -317,7 +317,7 @@ int pxt4_multi_mount_protect(struct super_block *sb,
 			mmp_check_interval + 60);
 
 	/* Print MMP interval if more than 20 secs. */
-	if (wait_time > EXT4_MMP_MIN_CHECK_INTERVAL * 4)
+	if (wait_time > PXT4_MMP_MIN_CHECK_INTERVAL * 4)
 		pxt4_warning(sb, "MMP interval %u higher than expected, please"
 			     " wait.\n", wait_time * 2);
 
@@ -376,12 +376,12 @@ skip:
 	/*
 	 * Start a kernel thread to update the MMP block periodically.
 	 */
-	EXT4_SB(sb)->s_mmp_tsk = kthread_run(kmmpd, mmpd_data, "kmmpd-%.*s",
+	PXT4_SB(sb)->s_mmp_tsk = kthread_run(kmmpd, mmpd_data, "kmmpd-%.*s",
 					     (int)sizeof(mmp->mmp_bdevname),
 					     bdevname(bh->b_bdev,
 						      mmp->mmp_bdevname));
-	if (IS_ERR(EXT4_SB(sb)->s_mmp_tsk)) {
-		EXT4_SB(sb)->s_mmp_tsk = NULL;
+	if (IS_ERR(PXT4_SB(sb)->s_mmp_tsk)) {
+		PXT4_SB(sb)->s_mmp_tsk = NULL;
 		kfree(mmpd_data);
 		pxt4_warning(sb, "Unable to create kmmpd thread for %s.",
 			     sb->s_id);

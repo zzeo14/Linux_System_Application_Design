@@ -119,7 +119,7 @@ static void pxt4_release_io_end(pxt4_io_end_t *io_end)
 	struct bio *bio, *next_bio;
 
 	BUG_ON(!list_empty(&io_end->list));
-	BUG_ON(io_end->flag & EXT4_IO_END_UNWRITTEN);
+	BUG_ON(io_end->flag & PXT4_IO_END_UNWRITTEN);
 	WARN_ON(io_end->handle);
 
 	for (bio = io_end->bio; bio; bio = next_bio) {
@@ -152,7 +152,7 @@ static int pxt4_end_io(pxt4_io_end_t *io)
 
 	io->handle = NULL;	/* Following call will use up the handle */
 	ret = pxt4_convert_unwritten_extents(handle, inode, offset, size);
-	if (ret < 0 && !pxt4_forced_shutdown(EXT4_SB(inode->i_sb))) {
+	if (ret < 0 && !pxt4_forced_shutdown(PXT4_SB(inode->i_sb))) {
 		pxt4_msg(inode->i_sb, KERN_EMERG,
 			 "failed to convert unwritten extents to written "
 			 "extents -- potential data loss!  "
@@ -166,7 +166,7 @@ static int pxt4_end_io(pxt4_io_end_t *io)
 
 static void dump_completed_IO(struct inode *inode, struct list_head *head)
 {
-#ifdef	EXT4FS_DEBUG
+#ifdef	PXT4FS_DEBUG
 	struct list_head *cur, *before, *after;
 	pxt4_io_end_t *io, *io0, *io1;
 
@@ -190,13 +190,13 @@ static void dump_completed_IO(struct inode *inode, struct list_head *head)
 /* Add the io_end to per-inode completed end_io list. */
 static void pxt4_add_complete_io(pxt4_io_end_t *io_end)
 {
-	struct pxt4_inode_info *ei = EXT4_I(io_end->inode);
-	struct pxt4_sb_info *sbi = EXT4_SB(io_end->inode->i_sb);
+	struct pxt4_inode_info *ei = PXT4_I(io_end->inode);
+	struct pxt4_sb_info *sbi = PXT4_SB(io_end->inode->i_sb);
 	struct workqueue_struct *wq;
 	unsigned long flags;
 
 	/* Only reserved conversions from writeback should enter here */
-	WARN_ON(!(io_end->flag & EXT4_IO_END_UNWRITTEN));
+	WARN_ON(!(io_end->flag & PXT4_IO_END_UNWRITTEN));
 	WARN_ON(!io_end->handle && sbi->s_journal);
 	spin_lock_irqsave(&ei->i_completed_io_lock, flags);
 	wq = sbi->rsv_conversion_wq;
@@ -212,7 +212,7 @@ static int pxt4_do_flush_completed_IO(struct inode *inode,
 	pxt4_io_end_t *io;
 	struct list_head unwritten;
 	unsigned long flags;
-	struct pxt4_inode_info *ei = EXT4_I(inode);
+	struct pxt4_inode_info *ei = PXT4_I(inode);
 	int err, ret = 0;
 
 	spin_lock_irqsave(&ei->i_completed_io_lock, flags);
@@ -222,7 +222,7 @@ static int pxt4_do_flush_completed_IO(struct inode *inode,
 
 	while (!list_empty(&unwritten)) {
 		io = list_entry(unwritten.next, pxt4_io_end_t, list);
-		BUG_ON(!(io->flag & EXT4_IO_END_UNWRITTEN));
+		BUG_ON(!(io->flag & PXT4_IO_END_UNWRITTEN));
 		list_del_init(&io->list);
 
 		err = pxt4_end_io(io);
@@ -256,7 +256,7 @@ pxt4_io_end_t *pxt4_init_io_end(struct inode *inode, gfp_t flags)
 void pxt4_put_io_end_defer(pxt4_io_end_t *io_end)
 {
 	if (atomic_dec_and_test(&io_end->count)) {
-		if (!(io_end->flag & EXT4_IO_END_UNWRITTEN) || !io_end->size) {
+		if (!(io_end->flag & PXT4_IO_END_UNWRITTEN) || !io_end->size) {
 			pxt4_release_io_end(io_end);
 			return;
 		}
@@ -269,7 +269,7 @@ int pxt4_put_io_end(pxt4_io_end_t *io_end)
 	int err = 0;
 
 	if (atomic_dec_and_test(&io_end->count)) {
-		if (io_end->flag & EXT4_IO_END_UNWRITTEN) {
+		if (io_end->flag & PXT4_IO_END_UNWRITTEN) {
 			err = pxt4_convert_unwritten_extents(io_end->handle,
 						io_end->inode, io_end->offset,
 						io_end->size);
@@ -319,7 +319,7 @@ static void pxt4_end_bio(struct bio *bio)
 				blk_status_to_errno(bio->bi_status));
 	}
 
-	if (io_end->flag & EXT4_IO_END_UNWRITTEN) {
+	if (io_end->flag & PXT4_IO_END_UNWRITTEN) {
 		/*
 		 * Link bio into list hanging from io_end. We have to do it
 		 * atomically as bio completions can be racing against each
