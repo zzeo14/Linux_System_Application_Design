@@ -1032,6 +1032,8 @@ deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o :=
   include/linux/posix_acl.h \
   include/uapi/linux/posix_acl.h \
   /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/calclock.h \
+    $(wildcard include/config/calclock.h) \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/ds_monitoring.h \
 
 /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o: $(deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/file.o)
 

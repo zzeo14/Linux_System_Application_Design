@@ -9,6 +9,6 @@ numjobs=4
 verify=meta
 
 [fio-test]
-size=12G
+size=3G
 group_reporting
 ; -- end job file --

@@ -35,6 +35,8 @@
 #include "xattr.h"
 #include "acl.h"
 #include "calclock.h"
+#include "ds_monitoring.h"
+DECLARE_DS_MONITORING(zeo_thread_dm);
 
 #ifdef CONFIG_FS_DAX
 static ssize_t pxt4_dax_read_iter(struct kiocb *iocb, struct iov_iter *to)
@@ -291,15 +293,15 @@ out:
 
 unsigned long long file_write_iter_time, file_write_iter_count;
 
+KTDEF(pxt4_file_write_iter);
 static ssize_t pxt4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	ssize_t ret;
-	struct timespec myclock[2];
-
-	getrawmonotonic(&myclock[0]);
+	ktime_t localclock[2];
+	ktget(&localclock[0]);
 	ret = pxt4_file_write_iter_internal(iocb, from);
-	getrawmonotonic(&myclock[1]);
-	calclock(myclock, &file_write_iter_time, &file_write_iter_count);
+	ktget(&localclock[1]);
+	ktput(localclock, pxt4_file_write_iter);
 
 	return ret;
 }

@@ -29,6 +29,7 @@ __used __section(__versions) = {
 	{ 0xe7750f8, "kobject_put" },
 	{ 0x6d6b9626, "blkdev_issue_discard" },
 	{ 0x31d7ffc5, "jbd3_inode_cache" },
+	{ 0x9714e0bb, "ktime_get_raw" },
 	{ 0xf7552c24, "d_path" },
 	{ 0x92a881bb, "kmem_cache_destroy" },
 	{ 0x442f5afa, "fs_bio_set" },
@@ -152,6 +153,7 @@ __used __section(__versions) = {
 	{ 0xc3ec1c94, "jbd3_journal_init_jbd_inode" },
 	{ 0xee91879b, "rb_first_postorder" },
 	{ 0x6729d3df, "__get_user_4" },
+	{ 0x3952887, "ktime_add_safe" },
 	{ 0x4829cf6b, "fscrypt_enqueue_decrypt_work" },
 	{ 0x9034a696, "mempool_destroy" },
 	{ 0x44e9a829, "match_token" },
@@ -195,6 +197,7 @@ __used __section(__versions) = {
 	{ 0x1d72b965, "__dquot_alloc_space" },
 	{ 0x97651e6c, "vmemmap_base" },
 	{ 0xce291505, "redirty_page_for_writepage" },
+	{ 0x3c3ff9fd, "sprintf" },
 	{ 0xa90f0641, "fscrypt_free_bounce_page" },
 	{ 0x99078b39, "trace_print_flags_seq" },
 	{ 0x953e1b9e, "ktime_get_real_seconds" },
@@ -275,7 +278,6 @@ __used __section(__versions) = {
 	{ 0x4fa8bed9, "bio_add_page" },
 	{ 0x99d18865, "generic_writepages" },
 	{ 0xcccf7597, "kobject_init_and_add" },
-	{ 0x1edb69d6, "ktime_get_raw_ts64" },
 	{ 0xf1e046cc, "panic" },
 	{ 0xfa475afd, "__fscrypt_prepare_link" },
 	{ 0xb3fef5c1, "file_remove_privs" },
@@ -555,6 +557,7 @@ __used __section(__versions) = {
 	{ 0x4c38d4e0, "utf8_strncasecmp_folded" },
 	{ 0x307455cc, "dquot_free_inode" },
 	{ 0x4db725f5, "dquot_release" },
+	{ 0xc60d0620, "__num_online_cpus" },
 	{ 0x6c17a159, "dquot_disable" },
 	{ 0xa7e3d5f7, "generic_fh_to_dentry" },
 	{ 0x61a1a281, "grab_cache_page_write_begin" },
@@ -604,4 +607,4 @@ __used __section(__versions) = {
 MODULE_INFO(depends, "jbd3");
 
 
-MODULE_INFO(srcversion, "F30322BEEE70D81CD7B4893");
+MODULE_INFO(srcversion, "FA3BCFB72C4F68B3E93E5E3");

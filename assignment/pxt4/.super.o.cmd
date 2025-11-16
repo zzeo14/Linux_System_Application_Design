@@ -1175,6 +1175,9 @@ deps_/home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/super.o :
   include/linux/proc_fs.h \
     $(wildcard include/config/proc/pid/arch/status.h) \
   /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/fsmap.h \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/calclock.h \
+    $(wildcard include/config/calclock.h) \
+  /home/zeo/Desktop/Linux_System_Application_Design/assignment/pxt4/ds_monitoring.h \
   include/trace/events/pxt4.h \
   include/linux/tracepoint.h \
     $(wildcard include/config/have/syscall/tracepoints.h) \
