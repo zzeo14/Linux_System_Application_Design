@@ -13,8 +13,9 @@ unsigned long long counter = 0;
 
 static int work_fn(void *data)
 {
+	int i = 1;
 	while(!kthread_should_stop()) {
-		__sync_fetch_and_add(&counter, 1);
+		__sync_lock_test_and_set(&counter, (i++)*(current->pid));
 		printk("pid[%d] fetch_and_add_function: counter: %lld\n", current->pid, counter);
 
 		msleep(100);
@@ -23,9 +24,9 @@ static int work_fn(void *data)
 	return 0;
 }
 
-int __init fetch_and_add_module_init(void)
+int __init test_and_set_module_init(void)
 {
-	printk("fetch_and_add_module_init: Entering Fetch and Add Module!\n");
+	printk("test_and_set_module_init: Entering Test and Set Module!\n");
 
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++) {
@@ -36,7 +37,7 @@ int __init fetch_and_add_module_init(void)
 	return 0;
 }
 
-void __exit fetch_and_add_module_cleanup(void)
+void __exit test_and_set_module_cleanup(void)
 {
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++){
@@ -45,9 +46,9 @@ void __exit fetch_and_add_module_cleanup(void)
 			threads[i] = NULL;
 		}
 	}
-	printk("fetch_and_add_module_cleanup: Exiting Fetch and Add Module!\n");
+	printk("test_and_set_module_cleanup: Exiting Test and Set Module!\n");
 }
 
-module_init(fetch_and_add_module_init);
-module_exit(fetch_and_add_module_cleanup);
+module_init(test_and_set_module_init);
+module_exit(test_and_set_module_cleanup);
 MODULE_LICENSE("GPL");
