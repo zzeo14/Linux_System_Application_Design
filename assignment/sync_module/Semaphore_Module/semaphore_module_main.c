@@ -37,7 +37,7 @@ static int work_fn(void *data)
 	return 0;
 }
 
-int __init spinlock_module_init(void)
+int __init semaphore_module_init(void)
 {
 	printk("Entering Spinlock Module!\n");
 
@@ -50,7 +50,7 @@ int __init spinlock_module_init(void)
 	return 0;
 }
 
-void __exit spinlock_module_cleanup(void)
+void __exit semaphore_module_cleanup(void)
 {
 	printk("Spinlock linked list insert imte: %lld ns, count: %lld\n", insert_time, insert_cnt);
 	printk("Spinlock linked list search imte: %lld ns, count: %lld\n", search_time, search_cnt);
@@ -64,6 +64,6 @@ void __exit spinlock_module_cleanup(void)
 	printk("Exiting Spinlock Module!\n");
 }
 
-module_init(spinlock_module_init);
-module_exit(spinlock_module_cleanup);
+module_init(semaphore_module_init);
+module_exit(semaphore_module_cleanup);
 MODULE_LICENSE("GPL");

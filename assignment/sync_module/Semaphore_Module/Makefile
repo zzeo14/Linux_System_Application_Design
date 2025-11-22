@@ -1,6 +1,6 @@
-obj-m := spinlock_module.o
+obj-m := semaphore_module.o
 
-spinlock_module-objs := spinlock_module_main.o linked_list_impl.o calclock.o
+semaphore_module-objs := semaphore_module_main.o linked_list_impl.o calclock.o
 
 KERNEL_DIR := /lib/modules/$(shell uname -r)/build
 PWD	:= $(shell pwd)

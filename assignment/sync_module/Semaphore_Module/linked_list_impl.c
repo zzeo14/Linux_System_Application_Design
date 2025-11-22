@@ -3,7 +3,7 @@
 
 #define CHUNK 250000
 
-DEFINE_SPINLOCK(list_lock);
+DEFINE_RWSEM(list_sem);
 LIST_HEAD(global_list_head);
 
 void set_iter_range(int thread_id, int range_bound[])
@@ -28,12 +28,12 @@ void *add_to_list(int thread_id, int range_bound[])
 		n->value = i;
 
 
-		spin_lock(&list_lock);
+		down_write(&list_sem);
 		getrawmonotonic(&localclock[0]);
 		list_add_tail(&n->list, &global_list_head);
 		getrawmonotonic(&localclock[1]);
 		calclock(localclock, &insert_time, &insert_cnt);
-		spin_unlock(&list_lock);
+		up_write(&list_sem);
 
 
 		if(first==NULL)
@@ -51,7 +51,7 @@ int search_list(int thread_id, void *data, int range_bound[])
 
 	struct node *cur = (struct node *) data, *tmp;
 
-	spin_lock(&list_lock);
+	down_read(&list_sem);
 	list_for_each_entry_safe(cur, tmp, &global_list_head, list){
 		if (cur->value < start || cur->value > end) continue;
 		getrawmonotonic(&localclock[0]);
@@ -59,7 +59,7 @@ int search_list(int thread_id, void *data, int range_bound[])
 		getrawmonotonic(&localclock[1]);
 		calclock(localclock, &search_time, &search_cnt);
 	}
-	spin_unlock(&list_lock);
+	up_read(&list_sem);
 
 	return 0;
 }
@@ -71,7 +71,7 @@ int delete_from_list(int thread_id, int range_bound[])
 	struct node *cur, *tmp;
 	struct timespec localclock[2];
 
-	spin_lock(&list_lock);
+	down_write(&list_sem);
 	list_for_each_entry_safe(cur, tmp, &global_list_head, list){
 		if(cur->value < start || cur->value > end) continue;
 		getrawmonotonic(&localclock[0]);
@@ -80,7 +80,7 @@ int delete_from_list(int thread_id, int range_bound[])
 		getrawmonotonic(&localclock[1]);
 		calclock(localclock, &delete_time, &delete_cnt);
 	}
-	spin_unlock(&list_lock);
+	up_write(&list_sem);
 
 	return 0;
 }
