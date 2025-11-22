@@ -1,9 +1,9 @@
-obj-m					:= spinlock_module.o
+obj-m := spinlock_module.o
 
-spinlock_module-y	 	:= linked_list_impl.o calclock.o
+spinlock_module-objs := linked_list_impl.o calclock.o
 
-KERNEL_DIR				:= /lib/modules/$(shell uname -r)/build
-PWD						:= $(shell pwd)
+KERNEL_DIR := /lib/modules/$(shell uname -r)/build
+PWD	:= $(shell pwd)
 
 default :
 	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules

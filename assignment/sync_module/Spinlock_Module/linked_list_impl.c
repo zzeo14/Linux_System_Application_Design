@@ -1,25 +1,9 @@
+#include "linked_list_impl.h"
 #include "calclock.h"
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/list.h>
-#include <linux/spinlock.h>
-#include <linux/delay.h>
-#include <linux/timekeeping.h>
+
 
 #define CHUNK 250000
 
-DEFINE_SPINLOCK(list_lock);
-
-struct node {
-	int value;
-	struct list_head list;
-};
-
-LIST_HEAD(global_list_head);
-
-extern unsigned long long insert_cnt, search_cnt, delete_cnt;
-extern unsigned long long insert_time, search_time, delete_time;
 
 void set_iter_range(int thread_id, int range_bound[])
 {

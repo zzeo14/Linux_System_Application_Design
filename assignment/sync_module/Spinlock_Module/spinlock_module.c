@@ -1,3 +1,5 @@
+#include "linked_list_impl.h"
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/kthread.h>
