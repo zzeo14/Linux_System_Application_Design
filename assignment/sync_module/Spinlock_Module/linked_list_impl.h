@@ -1,5 +1,5 @@
-#ifndef __LINKED_LIST_IMPL_C
-#define __LINKED_LIST_IMPL_C
+#ifndef __LINKED_LIST_IMPL_H
+#define __LINKED_LIST_IMPL_H
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -12,14 +12,12 @@
 extern unsigned long long insert_cnt, search_cnt, delete_cnt;
 extern unsigned long long insert_time, search_time, delete_time;
 
-DEFINE_SPINLOCK(list_lock);
 
 struct node {
 	int value;
 	struct list_head list;
 };
 
-LIST_HEAD(global_list_head);
 
 void set_iter_range(int thread_id, int range_bound[]);
 void *add_to_list(int thread_id, int range_bound[]);

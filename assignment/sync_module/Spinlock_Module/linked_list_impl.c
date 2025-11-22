@@ -1,9 +1,10 @@
 #include "linked_list_impl.h"
 #include "calclock.h"
 
-
 #define CHUNK 250000
 
+DEFINE_SPINLOCK(list_lock);
+LIST_HEAD(global_list_head);
 
 void set_iter_range(int thread_id, int range_bound[])
 {

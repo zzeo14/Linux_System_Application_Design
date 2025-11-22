@@ -1,6 +1,6 @@
 obj-m := spinlock_module.o
 
-spinlock_module-objs := linked_list_impl.o calclock.o
+spinlock_module-objs := spinlock_module_main.o linked_list_impl.o calclock.o
 
 KERNEL_DIR := /lib/modules/$(shell uname -r)/build
 PWD	:= $(shell pwd)
