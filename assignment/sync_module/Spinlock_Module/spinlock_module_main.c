@@ -39,7 +39,7 @@ static int work_fn(void *data)
 
 int __init spinlock_module_init(void)
 {
-	printk("Entering Spinlock Module!\n");
+	printk("spinlock_module_init: Entering Spinlock Module!\n");
 
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++) {
@@ -52,16 +52,16 @@ int __init spinlock_module_init(void)
 
 void __exit spinlock_module_cleanup(void)
 {
-	printk("Spinlock linked list insert imte: %lld ns, count: %lld\n", insert_time, insert_cnt);
-	printk("Spinlock linked list search imte: %lld ns, count: %lld\n", search_time, search_cnt);
-	printk("Spinlock linked list delete imte: %lld ns, count: %lld\n", delete_time, delete_cnt);
+	printk("Spinlock linked list insert time: %lld ns, count: %lld\n", insert_time, insert_cnt);
+	printk("Spinlock linked list search time: %lld ns, count: %lld\n", search_time, search_cnt);
+	printk("Spinlock linked list delete time: %lld ns, count: %lld\n", delete_time, delete_cnt);
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++){
 		if(threads[i]){
 			kthread_stop(threads[i]);
 		}
 	}
-	printk("Exiting Spinlock Module!\n");
+	printk("spinlock_module_cleanup: Exiting Spinlock Module!\n");
 }
 
 module_init(spinlock_module_init);

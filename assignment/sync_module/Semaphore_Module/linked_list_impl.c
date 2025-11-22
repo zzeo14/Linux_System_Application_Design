@@ -3,7 +3,7 @@
 
 #define CHUNK 250000
 
-DEFINE_RWSEM(list_sem);
+DECLARE_RWSEM(list_sem);
 LIST_HEAD(global_list_head);
 
 void set_iter_range(int thread_id, int range_bound[])
@@ -49,10 +49,10 @@ int search_list(int thread_id, void *data, int range_bound[])
 	printk(KERN_INFO "thread %d search range: %d ~ %d\n", thread_id, start, end);
 	struct timespec localclock[2];
 
-	struct node *cur = (struct node *) data, *tmp;
+	struct node *cur;
 
 	down_read(&list_sem);
-	list_for_each_entry_safe(cur, tmp, &global_list_head, list){
+	list_for_each_entry(cur, &global_list_head, list){
 		if (cur->value < start || cur->value > end) continue;
 		getrawmonotonic(&localclock[0]);
 		/* nothing to do for searching */

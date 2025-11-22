@@ -39,7 +39,7 @@ static int work_fn(void *data)
 
 int __init mutex_module_init(void)
 {
-	printk("Entering Mutex Module!\n");
+	printk("mutex_module_init: Entering Mutex Module!\n");
 
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++) {
@@ -52,16 +52,16 @@ int __init mutex_module_init(void)
 
 void __exit mutex_module_cleanup(void)
 {
-	printk("Mutex linked list insert imte: %lld ns, count: %lld\n", insert_time, insert_cnt);
-	printk("Mutex linked list search imte: %lld ns, count: %lld\n", search_time, search_cnt);
-	printk("Mutex linked list delete imte: %lld ns, count: %lld\n", delete_time, delete_cnt);
+	printk("Mutex linked list insert time: %lld ns, count: %lld\n", insert_time, insert_cnt);
+	printk("Mutex linked list search time: %lld ns, count: %lld\n", search_time, search_cnt);
+	printk("Mutex linked list delete time: %lld ns, count: %lld\n", delete_time, delete_cnt);
 	int i;
 	for(i = 0 ; i < NUM_THREAD ; i++){
 		if(threads[i]){
 			kthread_stop(threads[i]);
 		}
 	}
-	printk("Exiting Mutex Module!\n");
+	printk("mutex_module_cleanup: Exiting Mutex Module!\n");
 }
 
 module_init(mutex_module_init);
