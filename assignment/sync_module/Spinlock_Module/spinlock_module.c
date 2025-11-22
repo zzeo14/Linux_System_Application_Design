@@ -1,4 +1,5 @@
 #include "linked_list_impl.h"
+#include "calclock.h"
 
 #include <linux/kernel.h>
 #include <linux/module.h>
